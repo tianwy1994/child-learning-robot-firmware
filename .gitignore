@@ -1,0 +1,14 @@
+# IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Maven
+target/
+
+# Gradle
+build/
+
+# 系统
+.DS_Store
