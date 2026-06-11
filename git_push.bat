@@ -10,6 +10,8 @@ set COMMIT_MSG=feat: 新增功能
 echo 开始执行 Git 推送流程...
 echo.
 
+git init
+
 :: 1. 移除旧同名远程（避免重复添加报错）
 git remote remove %REMOTE_NAME% 2>nul
 
