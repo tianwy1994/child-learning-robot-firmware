@@ -67,35 +67,40 @@ void DisplayManager::showOff() {
 
 void DisplayManager::showDeviceState(DeviceState state) {
     switch (state) {
-        case STATE_STANDBY:
+        case STATE_BOOT:
+            setColor(255, 255, 255);  // 白色
+            break;
+        case STATE_IDLE:
+            _blinking = false;
             setColor(0, 100, 0);  // 暗绿
             break;
-        case STATE_DETECTION:
-            setColor(0, 0, 255);  // 蓝色
+        case STATE_FOCUSING:
+            _blinking = false;
+            setColor(0, 255, 0);  // 绿色常亮
             break;
-        case STATE_WETTING:
-        case STATE_RINSING:
-            setColor(0, 200, 255);  // 青色
+        case STATE_FOCUS_BREAK:
+            _blinking = true;
+            _blinkInterval = 1500;
+            _ledR = 0; _ledG = 200; _ledB = 255;  // 青色慢闪
             break;
-        case STATE_APPLY_SCRUB:
-        case STATE_APPLY_GEL:
-            setColor(255, 165, 0);  // 橙色
-            break;
-        case STATE_SCRUBBING:
-            setColor(255, 255, 0);  // 黄色
-            break;
-        case STATE_COMPLETED:
-            setColor(0, 255, 0);  // 绿色
-            break;
-        case STATE_EMERGENCY_STOP:
+        case STATE_LISTENING:
             _blinking = true;
             _blinkInterval = 200;
-            _ledR = 255; _ledG = 0; _ledB = 0;  // 红色快闪
+            _ledR = 255; _ledG = 165; _ledB = 0;  // 橙色快闪
+            break;
+        case STATE_PROCESSING:
+            _blinking = true;
+            _blinkInterval = 500;
+            _ledR = 0; _ledG = 0; _ledB = 255;  // 蓝色闪烁
+            break;
+        case STATE_SPEAKING:
+            _blinking = false;
+            setColor(255, 255, 0);  // 黄色常亮
             break;
         case STATE_ERROR:
             _blinking = true;
-            _blinkInterval = 1000;
-            _ledR = 255; _ledG = 0; _ledB = 255;  // 紫色慢闪
+            _blinkInterval = 200;
+            _ledR = 255; _ledG = 0; _ledB = 0;  // 红色快闪
             break;
     }
 }

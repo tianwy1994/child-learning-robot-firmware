@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
-#include "../include/config.h"
+#include "config.h"
 
 /**
  * BLE 服务端 —— 接收移动端 APP 发送的设备 token。
