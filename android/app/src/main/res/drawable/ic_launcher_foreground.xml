@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Robot face - simple smiley -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 C40,30 30,42 30,54 C30,66 40,78 54,78 C68,78 78,66 78,54 C78,42 68,30 54,30Z"/>
+    <!-- Left eye -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M44,50 C44,47.8 45.8,46 48,46 C50.2,46 52,47.8 52,50 C52,52.2 50.2,54 48,54 C45.8,54 44,52.2 44,50Z"/>
+    <!-- Right eye -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M56,50 C56,47.8 57.8,46 60,46 C62.2,46 64,47.8 64,50 C64,52.2 62.2,54 60,54 C57.8,54 56,52.2 56,50Z"/>
+    <!-- Smile -->
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M44,60 Q54,70 64,60"/>
+</vector>
