@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// JWT Token persistent storage
-// Corresponds to firmware AuthManager NVS storage
 private val Context.tokenDataStore: DataStore<Preferences> by preferencesDataStore(name = "auth")
 
 @Singleton

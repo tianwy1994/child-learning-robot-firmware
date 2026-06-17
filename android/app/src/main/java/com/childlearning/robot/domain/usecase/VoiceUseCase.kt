@@ -58,12 +58,12 @@ class VoiceUseCase @Inject constructor(
         )
     }
 
-    /** 停止录音 */
+    // KDoc removed
     fun stopRecording() {
         sttRepository.stopRecording()
     }
 
-    /** 停止播放 */
+    // KDoc removed
     fun stopPlaying() {
         ttsPlayer.stop()
     }

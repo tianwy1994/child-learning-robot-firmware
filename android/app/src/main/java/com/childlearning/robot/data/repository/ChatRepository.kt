@@ -20,7 +20,7 @@ import javax.inject.Singleton
 class ChatRepository @Inject constructor(
     private val apiService: ApiService
 ) {
-    /** 当前会话 ID，对应固件 ChatManager._sessionId */
+    // KDoc removed
     private var sessionId: String? = null
 
     /**

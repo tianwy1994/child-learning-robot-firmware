@@ -71,12 +71,12 @@ class PcmAudioPlayer @Inject constructor() {
         playing = false
     }
 
-    /** 停止播放 */
+    // KDoc removed
     fun stop() {
         playing = false
         audioTrack?.stop()
     }
 
-    /** 是否正在播放 */
+    // KDoc removed
     fun isPlaying(): Boolean = playing
 }

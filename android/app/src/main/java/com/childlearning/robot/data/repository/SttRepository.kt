@@ -54,7 +54,7 @@ class SttRepository @Inject constructor(
         }
     }
 
-    /** 停止录音 */
+    // KDoc removed
     fun stopRecording() {
         audioRecorder.stopRecording()
     }

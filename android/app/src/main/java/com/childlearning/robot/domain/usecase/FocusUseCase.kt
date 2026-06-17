@@ -37,7 +37,7 @@ class FocusUseCase @Inject constructor(
 
     private var pollJob: Job? = null
 
-    /** 回调：状态变化时通知 UI */
+    // KDoc removed
     var onReminder: ((String, String) -> Unit)? = null  // (type, preset)
     var onSessionEnd: (() -> Unit)? = null
 

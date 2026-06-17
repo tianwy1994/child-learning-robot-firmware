@@ -77,6 +77,21 @@ class AuthUseCase @Inject constructor(
         }
     }
 
+    suspend fun getDeviceToken(deviceId: String): Result<String> {
+        return try {
+            val response = apiService.getDeviceToken(deviceId)
+            if (response.isSuccess && response.data != null) {
+                val token = response.data.token
+                tokenStore.saveToken(token)
+                Result.success(token)
+            } else {
+                Result.failure(Exception("获取设备Token失败"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun logout() {
         tokenStore.clearToken()
     }

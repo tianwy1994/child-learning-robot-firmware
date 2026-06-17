@@ -33,9 +33,24 @@ class DeviceIdStore @Inject constructor(
 ) {
     companion object {
         private val KEY_DEVICE_ID = stringPreferencesKey("device_id")
+        private val KEY_DEVICE_TOKEN = stringPreferencesKey("device_token")
     }
 
-    /** 设备 ID 数据流 */
+    val deviceTokenFlow: Flow<String> = context.deviceDataStore.data.map { prefs ->
+        prefs[KEY_DEVICE_TOKEN] ?: ""
+    }
+
+    suspend fun getDeviceToken(): String {
+        return context.deviceDataStore.data.first()[KEY_DEVICE_TOKEN] ?: ""
+    }
+
+    suspend fun saveDeviceToken(token: String) {
+        context.deviceDataStore.edit { prefs ->
+            prefs[KEY_DEVICE_TOKEN] = token
+        }
+    }
+
+    // KDoc removed
     val deviceIdFlow: Flow<String> = context.deviceDataStore.data.map { prefs ->
         prefs[KEY_DEVICE_ID] ?: ""
     }

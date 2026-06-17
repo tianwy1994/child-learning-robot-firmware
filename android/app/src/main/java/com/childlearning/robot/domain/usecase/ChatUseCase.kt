@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class ChatUseCase @Inject constructor(
     private val chatRepository: ChatRepository
 ) {
-    /** 聊天历史（内存中，对应固件无持久化） */
+    // KDoc removed
     private val _messages = mutableListOf<ChatMessage>()
     val messages: List<ChatMessage> get() = _messages.toList()
 

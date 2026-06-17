@@ -15,24 +15,24 @@ package com.childlearning.robot.domain.enums
  * Android 版去掉 STATE_BOOT（不需要硬件启动），其余保留
  */
 sealed class AppState {
-    /** 空闲状态 — 主页 */
+    // KDoc removed
     data object Idle : AppState()
 
-    /** 专注学习中 — 计时 + 轮询提醒 */
+    // KDoc removed
     data object Focusing : AppState()
 
-    /** 专注休息中 — 收到 BREAK 提醒后 */
+    // KDoc removed
     data object FocusBreak : AppState()
 
-    /** 录音中 — 长按说话按钮 */
+    // KDoc removed
     data object Listening : AppState()
 
-    /** 处理中 — STT → Chat → TTS 流水线 */
+    // KDoc removed
     data object Processing : AppState()
 
-    /** 播放中 — TTS 音频播放 */
+    // KDoc removed
     data object Speaking : AppState()
 
-    /** 错误状态 */
+    // KDoc removed
     data class Error(val message: String) : AppState()
 }

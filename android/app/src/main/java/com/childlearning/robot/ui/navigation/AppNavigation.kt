@@ -17,6 +17,9 @@ import com.childlearning.robot.ui.screens.game.GameScreen
 import com.childlearning.robot.ui.screens.home.HomeScreen
 import com.childlearning.robot.ui.screens.homework.HomeworkScreen
 import com.childlearning.robot.ui.screens.login.LoginScreen
+import com.childlearning.robot.ui.screens.challenge.ChallengeListScreen
+import com.childlearning.robot.ui.screens.challenge.DynamicDragScreen
+import com.childlearning.robot.ui.screens.bind.DeviceBindScreen
 import com.childlearning.robot.ui.screens.voice.VoiceScreen
 import javax.inject.Inject
 
@@ -52,22 +55,35 @@ fun AppNavigation(
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.Locked, is AuthState.Expired -> {
-                navController.navigate("login") {
+                // 未认证时先检查设备绑定状态
+                // TODO: 检查是否已绑定，未绑定跳绑定页，已绑定跳登录页
+                navController.navigate("bind-device") {
                     popUpTo(0) { inclusive = true }
                 }
             }
             is AuthState.Authenticated -> {
-                // 已认证时如果在登录页则跳转主页
-                if (navController.currentDestination?.route == "login") {
+                // 已认证时如果在登录页/绑定页则跳转主页
+                val currentRoute = navController.currentDestination?.route
+                if (currentRoute == "login" || currentRoute == "bind-device") {
                     navController.navigate("home") {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             }
         }
     }
 
-    NavHost(navController = navController, startDestination = "login") {
+    NavHost(navController = navController, startDestination = "bind-device") {
+        composable("bind-device") {
+            DeviceBindScreen(
+                onBindSuccess = {
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable("login") {
             LoginScreen(
                 onLoginSuccess = {
@@ -111,6 +127,22 @@ fun AppNavigation(
 
         composable("homework") {
             HomeworkScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable("challenge-list") {
+            ChallengeListScreen(
+                onChallengeClick = { challengeId ->
+                    navController.navigate("challenge-detail/$challengeId")
+                }
+            )
+        }
+
+        composable("challenge-detail/{challengeId}") { backStackEntry ->
+            val challengeId = backStackEntry.arguments?.getString("challengeId")?.toLongOrNull() ?: 0
+            DynamicDragScreen(
+                challengeId = challengeId,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

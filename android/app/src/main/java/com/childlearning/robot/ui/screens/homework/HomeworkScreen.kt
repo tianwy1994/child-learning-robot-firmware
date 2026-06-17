@@ -115,8 +115,8 @@ fun HomeworkScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = {
-                        val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                            == PackageManager.PERMISSION_GRANTED
+                        val permResult = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                        val hasPermission = permResult == PackageManager.PERMISSION_GRANTED
                         if (hasPermission) {
                             val file = createImageFile(context)
                             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)

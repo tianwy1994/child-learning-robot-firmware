@@ -5,12 +5,12 @@ package com.childlearning.robot.domain.enums
  * 对应固件 config.h 中的 AuthState
  */
 sealed class AuthState {
-    /** 未登录 — 显示登录界面 */
+    // KDoc removed
     data object Locked : AuthState()
 
-    /** 已认证 — 正常使用 */
+    // KDoc removed
     data object Authenticated : AuthState()
 
-    /** Token 过期 — 需要重新登录 */
+    // KDoc removed
     data object Expired : AuthState()
 }

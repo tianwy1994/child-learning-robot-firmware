@@ -89,6 +89,6 @@ class AudioRecorder @Inject constructor() {
         isRecording = false
     }
 
-    /** 是否正在录音 */
+    // KDoc removed
     fun isActive(): Boolean = isRecording
 }
