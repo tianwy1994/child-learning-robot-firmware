@@ -14,7 +14,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -32,37 +31,37 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.childlearning.robot.core.network.DragCard
+import com.childlearning.robot.core.network.PageUiSchema
 import com.childlearning.robot.core.network.TargetSlot
 import com.childlearning.robot.ui.components.GradientButton
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
-import kotlin.random.Random
 
 @Composable
 fun DynamicDragScreen(
@@ -70,23 +69,22 @@ fun DynamicDragScreen(
     onBack: () -> Unit,
     viewModel: ChallengeViewModel = hiltViewModel()
 ) {
-    val uiState = viewModel.uiState.collectAsStateWithLifecycle()
-    val challenge = viewModel.currentChallenge.collectAsStateWithLifecycle()
-    val evalResult = viewModel.evaluationResult.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
+    val challenge by viewModel.currentChallenge.collectAsState()
+    val evalResult by viewModel.evaluationResult.collectAsState()
 
     var slotCardMap by remember { mutableStateOf(mapOf<Int, Int>()) } // slotId -> cardId
     var draggedCard by remember { mutableStateOf<DragCard?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    var dragStartPosition by remember { mutableStateOf(Offset.Zero) }
     var showConfetti by remember { mutableStateOf(false) }
 
     LaunchedEffect(challengeId) {
         viewModel.loadChallengeDetail(challengeId)
     }
 
-    LaunchedEffect(uiState.value) {
-        if (uiState.value is ChallengeUiState.Evaluated) {
-            showConfetti = evalResult.value?.isCorrect == true
+    LaunchedEffect(uiState) {
+        if (uiState is ChallengeUiState.Evaluated) {
+            showConfetti = evalResult?.isCorrect == true
         }
     }
 
@@ -122,7 +120,7 @@ fun DynamicDragScreen(
                 }
             }
 
-            when (uiState.value) {
+            when (uiState) {
                 is ChallengeUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color.White)
@@ -131,7 +129,7 @@ fun DynamicDragScreen(
                 is ChallengeUiState.Error -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            text = (uiState.value as ChallengeUiState.Error).message,
+                            text = (uiState as ChallengeUiState.Error).message,
                             color = Color.White,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -140,7 +138,8 @@ fun DynamicDragScreen(
                 is ChallengeUiState.Success,
                 is ChallengeUiState.Submitting,
                 is ChallengeUiState.Evaluated -> {
-                    challenge.value?.let { ch ->
+                    val ch = challenge
+                    if (ch != null) {
                         val schema = ch.pageUiSchema
 
                         // 题目内容
@@ -219,26 +218,23 @@ fun DynamicDragScreen(
 
                                             DragCardView(
                                                 card = card,
-                                                enabled = !isPlaced && uiState.value != ChallengeUiState.Evaluated,
+                                                enabled = !isPlaced && uiState != ChallengeUiState.Evaluated,
                                                 onDragStart = { offset ->
                                                     draggedCard = card
-                                                    dragStartPosition = offset
                                                 },
                                                 onDrag = { offset ->
                                                     dragOffset = offset
                                                 },
                                                 onDragEnd = { endOffset ->
                                                     // 检测是否拖到某个插槽
-                                                    schema.targetSlots.forEach { slot ->
-                                                        // 简化碰撞检测
-                                                        val slotArea = Rect(
+                                                    schema?.targetSlots?.forEach { slot ->
+                                                        val slotArea = DragRect(
                                                             slot.x.toFloat(),
                                                             slot.y.toFloat(),
                                                             (slot.x + slot.w).toFloat(),
                                                             (slot.y + slot.h).toFloat()
                                                         )
                                                         if (slotArea.contains(endOffset)) {
-                                                            // 放入插槽，自动替换原有卡片
                                                             slotCardMap = slotCardMap.toMutableMap().apply {
                                                                 put(slot.slotId, card.cardId)
                                                             }
@@ -275,31 +271,31 @@ fun DynamicDragScreen(
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         schema?.targetSlots?.forEach { slot ->
                                             val placedCardId = slotCardMap[slot.slotId]
-                                            val placedCard = schema.dragCards.find { it.cardId == placedCardId }
+                                            val placedCard = schema?.dragCards?.find { it.cardId == placedCardId }
                                             val context = LocalContext.current
-            val isCorrect = evalResult.value != null &&
-                                                    schema.correctMapping[slot.slotId.toString()] == placedCardId.toString()
-            val isWrong = evalResult.value != null &&
+                                            val isCorrect = evalResult != null &&
+                                                    schema?.correctMapping?.get(slot.slotId.toString()) == placedCardId?.toString()
+                                            val isWrong = evalResult != null &&
                                                     placedCardId != null &&
-                                                    schema.correctMapping[slot.slotId.toString()] != placedCardId.toString()
+                                                    schema?.correctMapping?.get(slot.slotId.toString()) != placedCardId.toString()
 
-            // 提交后震动反馈
-            LaunchedEffect(isCorrect, isWrong) {
-                if (isCorrect) {
-                    vibrate(context, 100) // 正确长震动
-                } else if (isWrong) {
-                    vibrate(context, 50) // 错误短震动
-                    kotlinx.coroutines.delay(100)
-                    vibrate(context, 50) // 两次短震动
-                }
-            }
+                                            // 提交后震动反馈
+                                            LaunchedEffect(isCorrect, isWrong) {
+                                                if (isCorrect) {
+                                                    vibrate(context, 100)
+                                                } else if (isWrong) {
+                                                    vibrate(context, 50)
+                                                    kotlinx.coroutines.delay(100)
+                                                    vibrate(context, 50)
+                                                }
+                                            }
 
                                             TargetSlotView(
                                                 slot = slot,
                                                 placedCard = placedCard,
                                                 isCorrect = isCorrect,
                                                 isWrong = isWrong,
-                                                enabled = uiState.value != ChallengeUiState.Evaluated
+                                                enabled = uiState != ChallengeUiState.Evaluated
                                             )
                                         }
                                     }
@@ -309,12 +305,12 @@ fun DynamicDragScreen(
 
                         // 提交按钮
                         AnimatedVisibility(
-                            visible = uiState.value != ChallengeUiState.Evaluated,
+                            visible = uiState != ChallengeUiState.Evaluated,
                             enter = fadeIn() + scaleIn(),
                             exit = fadeOut() + scaleOut()
                         ) {
                             GradientButton(
-                                text = if (uiState.value == ChallengeUiState.Submitting) "⏳ 魔法评估中..." else "🚀 提交答案",
+                                text = if (uiState == ChallengeUiState.Submitting) "⏳ 魔法评估中..." else "🚀 提交答案",
                                 onClick = {
                                     val mapping = slotCardMap.mapKeys { it.key.toString() }
                                         .mapValues { it.value.toString() }
@@ -323,17 +319,17 @@ fun DynamicDragScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 16.dp),
-                                enabled = slotCardMap.isNotEmpty() && uiState.value != ChallengeUiState.Submitting
+                                enabled = slotCardMap.isNotEmpty() && uiState != ChallengeUiState.Submitting
                             )
                         }
 
                         // 评估结果
                         AnimatedVisibility(
-                            visible = uiState.value == ChallengeUiState.Evaluated,
+                            visible = uiState == ChallengeUiState.Evaluated,
                             enter = fadeIn() + scaleIn(),
                             exit = fadeOut() + scaleOut()
                         ) {
-                            evalResult.value?.let { result ->
+                            evalResult?.let { result ->
                                 EvaluationResultCard(
                                     result = result,
                                     onContinue = {
@@ -345,13 +341,15 @@ fun DynamicDragScreen(
                         }
                     }
                 }
+                else -> {}
             }
         }
 
         // 拖拽中悬浮卡片
-        if (draggedCard != null) {
+        val currentDraggedCard = draggedCard
+        if (currentDraggedCard != null) {
             DraggingCardOverlay(
-                card = draggedCard!!,
+                card = currentDraggedCard,
                 offset = dragOffset
             )
         }
@@ -373,6 +371,7 @@ fun DragCardView(
 ) {
     val scale = remember { Animatable(1f) }
     val rotation = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
 
     val cardColor = remember { Color(android.graphics.Color.parseColor(card.color)) }
     val textColor = if (isDarkColor(cardColor)) Color.White else Color.Black
@@ -404,24 +403,34 @@ fun DragCardView(
             .then(
                 if (enabled) {
                     Modifier.pointerInput(Unit) {
+                        var totalDragOffset = Offset.Zero
                         detectDragGestures(
                             onDragStart = { offset ->
                                 onDragStart(offset)
-                                scale.animateTo(1.2f, animationSpec = spring(stiffness = Spring.StiffnessMedium))
-                                rotation.animateTo(5f)
+                                coroutineScope.launch {
+                                    scale.animateTo(1.2f, animationSpec = spring(stiffness = Spring.StiffnessMedium))
+                                    rotation.animateTo(5f)
+                                }
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                onDrag(dragAmount)
+                                totalDragOffset += dragAmount
+                                onDrag(totalDragOffset)
                             },
                             onDragEnd = {
-                                onDragEnd(dragOffset)
-                                scale.animateTo(1f)
-                                rotation.animateTo(0f)
+                                onDragEnd(totalDragOffset)
+                                coroutineScope.launch {
+                                    scale.animateTo(1f)
+                                    rotation.animateTo(0f)
+                                }
+                                totalDragOffset = Offset.Zero
                             },
                             onDragCancel = {
-                                scale.animateTo(1f)
-                                rotation.animateTo(0f)
+                                coroutineScope.launch {
+                                    scale.animateTo(1f)
+                                    rotation.animateTo(0f)
+                                }
+                                totalDragOffset = Offset.Zero
                             }
                         )
                     }
@@ -660,8 +669,8 @@ fun ConfettiOverlay() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         repeat(confettiCount) {
-            val initialX = remember { Random.nextFloat() * 1000 }
-            val fallDuration = remember { 3000 + Random.nextInt(3000) }
+            val initialX = remember { kotlin.random.Random.nextFloat() * 1000 }
+            val fallDuration = remember { 3000 + kotlin.random.Random.nextInt(3000) }
             val offsetY = remember { Animatable(0f) }
 
             LaunchedEffect(Unit) {
@@ -679,8 +688,8 @@ fun ConfettiOverlay() {
                     )
                     .size(10.dp)
                     .background(
-                        color = colors.random(),
-                        shape = if (Random.nextBoolean()) RoundedCornerShape(50) else RoundedCornerShape(2.dp)
+                        color = colors[it % colors.size],
+                        shape = if (it % 2 == 0) RoundedCornerShape(50) else RoundedCornerShape(2.dp)
                     )
             )
         }
@@ -692,7 +701,7 @@ fun isDarkColor(color: Color): Boolean {
     return luminance < 0.5
 }
 
-data class Rect(
+private data class DragRect(
     val left: Float,
     val top: Float,
     val right: Float,
@@ -700,5 +709,15 @@ data class Rect(
 ) {
     fun contains(offset: Offset): Boolean {
         return offset.x >= left && offset.x <= right && offset.y >= top && offset.y <= bottom
+    }
+}
+
+private fun vibrate(context: Context, durationMs: Long) {
+    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        vibrator.vibrate(VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE))
+    } else {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(durationMs)
     }
 }

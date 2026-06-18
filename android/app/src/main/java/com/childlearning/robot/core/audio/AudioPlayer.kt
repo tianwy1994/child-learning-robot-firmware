@@ -5,7 +5,6 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
@@ -16,7 +15,7 @@ import javax.inject.Singleton
  * Android 使用 AudioTrack 直接播放 PCM 数据
  */
 @Singleton
-class PcmAudioPlayer @Inject constructor() {
+class PcmAudioPlayer {
 
     companion object {
         private const val SAMPLE_RATE = 16000

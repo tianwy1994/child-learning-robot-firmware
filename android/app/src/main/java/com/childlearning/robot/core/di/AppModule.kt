@@ -2,6 +2,7 @@ package com.childlearning.robot.core.di
 
 import android.content.Context
 import com.childlearning.robot.core.audio.AudioRecorder
+import com.childlearning.robot.core.audio.PcmAudioPlayer
 import com.childlearning.robot.core.network.ApiService
 import com.childlearning.robot.data.repository.*
 import dagger.Module
@@ -50,5 +51,17 @@ object AppModule {
         @ApplicationContext context: Context
     ): HomeworkRepository {
         return HomeworkRepository(apiService, context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideChallengeRepository(apiService: ApiService): ChallengeRepository {
+        return ChallengeRepository(apiService)
+    }
+
+    @Provides
+    @Singleton
+    fun providePcmAudioPlayer(): PcmAudioPlayer {
+        return PcmAudioPlayer()
     }
 }

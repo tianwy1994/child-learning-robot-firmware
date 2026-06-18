@@ -1,10 +1,10 @@
 package com.childlearning.robot.ui.screens.bind
 
-import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.childlearning.robot.core.storage.DeviceIdStore
 import com.childlearning.robot.domain.usecase.AuthUseCase
+import com.childlearning.robot.domain.usecase.DeviceBindingResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,23 +22,15 @@ class DeviceBindViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<BindUiState>(BindUiState.Loading)
     val uiState: StateFlow<BindUiState> = _uiState.asStateFlow()
 
-    val deviceId: String
-        get() = deviceIdStore.getDeviceId()
+    // Device ID is initialized asynchronously; show placeholder until ready
+    var deviceId: String = ""
+        private set
 
     init {
-        // 生成唯一设备ID
-        generateDeviceId()
-        // 启动轮询绑定状态
-        startPollingBindingStatus()
-    }
-
-    private fun generateDeviceId() {
-        val existingId = deviceIdStore.getDeviceId()
-        if (existingId.isBlank()) {
-            // 生成唯一设备ID：使用Android ID + 时间戳哈希
-            val androidId = Build.SERIAL + Build.ID + Build.MODEL + System.currentTimeMillis()
-            val newDeviceId = androidId.hashCode().toUInt().toString(16).padStart(8, '0')
-            deviceIdStore.saveDeviceId(newDeviceId)
+        // Generate/retrieve device ID then start polling
+        viewModelScope.launch {
+            deviceId = deviceIdStore.getDeviceId()
+            startPollingBindingStatus()
         }
     }
 

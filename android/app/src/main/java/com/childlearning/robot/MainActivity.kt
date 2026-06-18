@@ -9,6 +9,9 @@ import com.childlearning.robot.domain.usecase.AuthUseCase
 import com.childlearning.robot.ui.navigation.AppNavigation
 import com.childlearning.robot.ui.theme.RobotTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -21,10 +24,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // 注册 401 拦截回调
+        // 注册 401 拦截回调 → 触发未授权事件
         authInterceptor.onUnauthorized = {
-            // 在主线程触发导航到登录页
-            // 通过 AuthUseCase 的 unauthorizedEvent 通知
+            CoroutineScope(Dispatchers.Main).launch {
+                authUseCase.handleUnauthorized()
+            }
         }
 
         setContent {

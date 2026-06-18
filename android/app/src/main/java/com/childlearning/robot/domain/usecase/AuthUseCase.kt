@@ -1,6 +1,6 @@
 package com.childlearning.robot.domain.usecase
 
-import com.childlearning.robot.core.network.ApiService
+import com.childlearning.robot.core.network.AuthApiService
 import com.childlearning.robot.core.network.LoginRequest
 import com.childlearning.robot.core.network.LoginResponse
 import com.childlearning.robot.core.storage.TokenStore
@@ -13,20 +13,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 认证用例 - 管理用户登录和设备绑定状态
- *
- * 认证流程：
- * 1. 用户在手机App端注册
- * 2. 用户在本设备上使用手机号+密码登录 → user token
- * 3. 设备展示 deviceId，等待手机App绑定
- * 4. 手机App扫描/输入 deviceId → 调用 /api/auth/device/bind
- * 5. 设备轮询 /api/auth/device/status → 绑定成功 → 获得 device token
- * 6. 设备使用 device token 调用硬件服务端 API
+ * 认证用例 — 调用认证服务端 (port 8081)
  */
 @Singleton
 class AuthUseCase @Inject constructor(
     private val tokenStore: TokenStore,
-    private val apiService: ApiService
+    private val authApiService: AuthApiService
 ) {
     val authState: Flow<AuthState> = tokenStore.tokenFlow.map { token ->
         if (token.isNullOrBlank()) AuthState.Locked else AuthState.Authenticated
@@ -36,11 +28,11 @@ class AuthUseCase @Inject constructor(
     val unauthorizedEvent: SharedFlow<Unit> = _unauthorizedEvent
 
     /**
-     * 用户登录（手机号+密码）
+     * 账号密码登录 → 调用认证端 /api/auth/login
      */
     suspend fun login(phone: String, password: String): Result<LoginResponse> {
         return try {
-            val response = apiService.login(LoginRequest(phone, password))
+            val response = authApiService.login(LoginRequest(phone, password))
             if (response.isSuccess && response.data != null) {
                 tokenStore.saveToken(response.data.token)
                 Result.success(response.data)
@@ -53,18 +45,14 @@ class AuthUseCase @Inject constructor(
     }
 
     /**
-     * 检查设备绑定状态（轮询）
-     * 手机App绑定设备后，设备通过此方法获取 device token
+     * 检查设备绑定状态
      */
     suspend fun checkDeviceBinding(deviceId: String): Result<DeviceBindingResult> {
         return try {
-            val response = apiService.getDeviceStatus(deviceId)
+            val response = authApiService.getDeviceStatus(deviceId)
             if (response.isSuccess && response.data != null) {
                 val data = response.data
                 if (data.bound && data.tokenExpiresAt != null) {
-                    // 绑定成功，但device token需要通过其他方式获取
-                    // 实际上认证端在 /api/auth/device/bind 时返回 token
-                    // 设备端通过轮询 status 只能知道绑定成功，token 需要再次获取
                     Result.success(DeviceBindingResult.Bound)
                 } else {
                     Result.success(DeviceBindingResult.Pending)
@@ -77,9 +65,12 @@ class AuthUseCase @Inject constructor(
         }
     }
 
+    /**
+     * 获取设备 Token
+     */
     suspend fun getDeviceToken(deviceId: String): Result<String> {
         return try {
-            val response = apiService.getDeviceToken(deviceId)
+            val response = authApiService.getDeviceToken(deviceId)
             if (response.isSuccess && response.data != null) {
                 val token = response.data.token
                 tokenStore.saveToken(token)
@@ -102,9 +93,6 @@ class AuthUseCase @Inject constructor(
     }
 }
 
-/**
- * 设备绑定状态
- */
 sealed class DeviceBindingResult {
     data object Pending : DeviceBindingResult()
     data object Bound : DeviceBindingResult()

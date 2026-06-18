@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import com.childlearning.robot.core.network.AuthInterceptor
 import com.childlearning.robot.domain.enums.AuthState
 import com.childlearning.robot.domain.usecase.AuthUseCase
+import com.childlearning.robot.ui.screens.auth.AuthChoiceScreen
 import com.childlearning.robot.ui.screens.chat.ChatScreen
 import com.childlearning.robot.ui.screens.focus.FocusScreen
 import com.childlearning.robot.ui.screens.game.GameScreen
@@ -18,21 +19,17 @@ import com.childlearning.robot.ui.screens.home.HomeScreen
 import com.childlearning.robot.ui.screens.homework.HomeworkScreen
 import com.childlearning.robot.ui.screens.login.LoginScreen
 import com.childlearning.robot.ui.screens.challenge.ChallengeListScreen
-import com.childlearning.robot.ui.screens.challenge.DynamicDragScreen
+import com.childlearning.robot.ui.screens.challenge.ChallengeDetailScreen
 import com.childlearning.robot.ui.screens.bind.DeviceBindScreen
 import com.childlearning.robot.ui.screens.voice.VoiceScreen
-import javax.inject.Inject
 
 /**
  * 应用导航
  *
- * AuthState 驱动：
- * - AuthState.Locked / Expired → 跳转登录页
- * - AuthState.Authenticated → 跳转主页
- *
- * 401 自动拦截：
- * - AuthInterceptor 检测到 401 → 清除 token → 触发 unauthorizedEvent
- * - 导航监听事件 → 跳转登录页
+ * 启动流程：
+ * 1. 默认进入首页（无需登录即可浏览）
+ * 2. 使用功能时如未认证，401 拦截 → 跳到选择页（登录/绑定二选一）
+ * 3. 认证成功后返回首页
  */
 @Composable
 fun AppNavigation(
@@ -42,58 +39,17 @@ fun AppNavigation(
     val navController = rememberNavController()
     val authState by authUseCase.authState.collectAsState(initial = AuthState.Locked)
 
-    // 监听 401 未授权事件 → 强制跳转登录页
+    // 监听 401 未授权事件 → 跳到选择页
     LaunchedEffect(Unit) {
         authUseCase.unauthorizedEvent.collect {
-            navController.navigate("login") {
+            navController.navigate("auth-choice") {
                 popUpTo(0) { inclusive = true }
             }
         }
     }
 
-    // AuthState 驱动导航
-    LaunchedEffect(authState) {
-        when (authState) {
-            is AuthState.Locked, is AuthState.Expired -> {
-                // 未认证时先检查设备绑定状态
-                // TODO: 检查是否已绑定，未绑定跳绑定页，已绑定跳登录页
-                navController.navigate("bind-device") {
-                    popUpTo(0) { inclusive = true }
-                }
-            }
-            is AuthState.Authenticated -> {
-                // 已认证时如果在登录页/绑定页则跳转主页
-                val currentRoute = navController.currentDestination?.route
-                if (currentRoute == "login" || currentRoute == "bind-device") {
-                    navController.navigate("home") {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-            }
-        }
-    }
-
-    NavHost(navController = navController, startDestination = "bind-device") {
-        composable("bind-device") {
-            DeviceBindScreen(
-                onBindSuccess = {
-                    navController.navigate("home") {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        composable("login") {
-            LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate("home") {
-                        popUpTo("login") { inclusive = true }
-                    }
-                }
-            )
-        }
-
+    NavHost(navController = navController, startDestination = "home") {
+        // ===== 首页 =====
         composable("home") {
             HomeScreen(
                 onNavigateToChat = { navController.navigate("chat") },
@@ -101,45 +57,69 @@ fun AppNavigation(
                 onNavigateToFocus = { navController.navigate("focus") },
                 onNavigateToGame = { navController.navigate("game") },
                 onNavigateToHomework = { navController.navigate("homework") },
+                onNavigateToChallenge = { navController.navigate("challenge-list") },
+                onNavigateToBind = { navController.navigate("auth-choice") },
                 onLogout = {
-                    navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable("chat") {
-            ChatScreen(onBack = { navController.popBackStack() })
+        // ===== 认证选择（登录/绑定二选一）=====
+        composable("auth-choice") {
+            AuthChoiceScreen(
+                onNavigateToLogin = { navController.navigate("login") },
+                onNavigateToBind = { navController.navigate("bind-device") },
+                onBack = { navController.popBackStack() }
+            )
         }
 
-        composable("voice") {
-            VoiceScreen(onBack = { navController.popBackStack() })
+        // ===== 账号密码登录 =====
+        composable("login") {
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() }
+            )
         }
 
-        composable("focus") {
-            FocusScreen(onBack = { navController.popBackStack() })
+        // ===== 设备绑定 =====
+        composable("bind-device") {
+            DeviceBindScreen(
+                onBindSuccess = {
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() }
+            )
         }
 
-        composable("game") {
-            GameScreen(onBack = { navController.popBackStack() })
-        }
+        // ===== 功能页面 =====
+        composable("chat") { ChatScreen(onBack = { navController.popBackStack() }) }
+        composable("voice") { VoiceScreen(onBack = { navController.popBackStack() }) }
+        composable("focus") { FocusScreen(onBack = { navController.popBackStack() }) }
+        composable("game") { GameScreen(onBack = { navController.popBackStack() }) }
+        composable("homework") { HomeworkScreen(onBack = { navController.popBackStack() }) }
 
-        composable("homework") {
-            HomeworkScreen(onBack = { navController.popBackStack() })
-        }
-
+        // ===== 挑战 =====
         composable("challenge-list") {
             ChallengeListScreen(
                 onChallengeClick = { challengeId ->
                     navController.navigate("challenge-detail/$challengeId")
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
         composable("challenge-detail/{challengeId}") { backStackEntry ->
             val challengeId = backStackEntry.arguments?.getString("challengeId")?.toLongOrNull() ?: 0
-            DynamicDragScreen(
+            ChallengeDetailScreen(
                 challengeId = challengeId,
                 onBack = { navController.popBackStack() }
             )

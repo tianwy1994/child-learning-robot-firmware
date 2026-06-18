@@ -1,5 +1,6 @@
 package com.childlearning.robot.core.network
 
+import com.childlearning.robot.core.storage.TokenStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -9,20 +10,15 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 
-// 网络模块配置
-// 修改下方的两个 URL 即可切换服务器地址
-// 认证服务端 (8081) 处理登录和绑定
-// 硬件服务端 (8080) 处理所有硬件功能
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // 硬件服务端地址 (port 8080)
-    const val HARDWARE_BASE_URL = "http://192.168.1.100:8080/"
-    // 认证服务端地址 (port 8081)
-    const val AUTH_BASE_URL = "http://192.168.1.100:8081/"
+    const val HARDWARE_BASE_URL = "http://192.168.31.117:8080/"
+    const val AUTH_BASE_URL = "http://192.168.31.117:8081/"
 
     private const val CONNECT_TIMEOUT = 15L
     private const val READ_TIMEOUT = 30L
@@ -50,9 +46,12 @@ object NetworkModule {
             .build()
     }
 
+    // ===== 硬件服务端 Retrofit (port 8080) =====
+
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    @Named("hardware")
+    fun provideHardwareRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
             .baseUrl(HARDWARE_BASE_URL)
             .client(okHttpClient)
@@ -60,9 +59,30 @@ object NetworkModule {
             .build()
     }
 
+    // ===== 认证服务端 Retrofit (port 8081) =====
+
     @Provides
     @Singleton
-    fun provideApiService(retrofit: Retrofit): ApiService {
+    @Named("auth")
+    fun provideAuthRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(AUTH_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    // ===== API 接口 =====
+
+    @Provides
+    @Singleton
+    fun provideApiService(@Named("hardware") retrofit: Retrofit): ApiService {
         return retrofit.create(ApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthApiService(@Named("auth") retrofit: Retrofit): AuthApiService {
+        return retrofit.create(AuthApiService::class.java)
     }
 }

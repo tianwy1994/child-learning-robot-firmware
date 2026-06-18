@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.childlearning.robot.ui.theme.GoldStar
 
@@ -78,4 +79,25 @@ fun LevelBadge(
             )
         }
     }
+}
+
+/**
+ * 简单标签徽章
+ * 展示带颜色的文字标签
+ */
+@Composable
+fun LevelBadge(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = Color.White,
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    )
 }

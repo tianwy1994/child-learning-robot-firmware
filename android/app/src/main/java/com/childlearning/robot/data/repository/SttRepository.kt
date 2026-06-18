@@ -46,9 +46,16 @@ class SttRepository @Inject constructor(
 
             if (response.isSuccess && response.data != null) {
                 Result.success(response.data.text)
+            } else if (response.code == 404) {
+                Result.failure(Exception("语音识别服务暂未开放，请稍后再试"))
             } else {
                 Result.failure(Exception("语音识别失败: code=${response.code}"))
             }
+        } catch (e: retrofit2.HttpException) {
+            if (e.code() == 404) {
+                return Result.failure(Exception("语音识别服务暂未开放，请稍后再试"))
+            }
+            Result.failure<String>(e)
         } catch (e: Exception) {
             Result.failure(e)
         }

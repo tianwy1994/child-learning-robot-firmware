@@ -6,43 +6,8 @@ import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
 
-// 硬件端 API 接口定义
-// 两个服务端：
-// - 认证服务端 (port 8081): /api/auth/  (通过 NetworkModule 代理)
-// - 硬件服务端 (port 8080): /api/hardware/ (直接调用)
+// 硬件服务端 API（port 8080）— 认证相关接口请使用 AuthApiService（port 8081）
 interface ApiService {
-
-    // ========================================================================
-    // 认证服务端 API - /api/auth/*
-    // ========================================================================
-
-    // ---------- 用户登录 ----------
-
-    @POST("api/auth/login")
-    suspend fun login(
-        @Body body: LoginRequest
-    ): ApiResult<LoginResponse>
-
-    // ---------- 设备绑定 ----------
-
-    @GET("api/auth/device/status")
-    suspend fun getDeviceStatus(
-        @Query("deviceId") deviceId: String
-    ): ApiResult<DeviceStatusResponse>
-
-    @POST("api/auth/device/bind")
-    suspend fun bindDevice(
-        @Body body: DeviceBindRequest
-    ): ApiResult<DeviceBindResponse>
-
-    @GET("api/auth/device/token")
-    suspend fun getDeviceToken(
-        @Query("deviceId") deviceId: String
-    ): ApiResult<DeviceTokenResponse>
-
-    // ========================================================================
-    // 硬件服务端 API - /api/hardware/*
-    // ========================================================================
 
     // ---------- AI 聊天 ----------
 
@@ -97,17 +62,16 @@ interface ApiService {
     // ---------- 作业 ----------
 
     @Multipart
-    @POST("api/hardware/homework/ocr")
-    suspend fun homeworkOcr(
-        @Part file: MultipartBody.Part
-    ): ApiResult<OcrResponse>
-
-    @Multipart
     @POST("api/hardware/homework/submit")
     suspend fun submitHomework(
         @Part file: MultipartBody.Part,
         @Part("subject") subject: RequestBody
-    ): ApiResult<HomeworkSubmitResponse>
+    ): ApiResult<HomeworkSubmitAsyncResponse>
+
+    @GET("api/hardware/homework/status/{recordId}")
+    suspend fun getHomeworkStatus(
+        @Path("recordId") recordId: Long
+    ): ApiResult<HomeworkStatusResponse>
 
     // ---------- 挑战系统 ----------
     @GET("api/hardware/challenge/daily")
@@ -138,6 +102,13 @@ interface ApiService {
     @GET("api/hardware/challenge/speak-feedback")
     @Headers("Accept: audio/mpeg")
     suspend fun speakFeedback(@Query("text") text: String): Response<ResponseBody>
+
+    // ---------- 语音识别 ----------
+
+    @POST("api/hardware/stt/recognize")
+    suspend fun recognizeSpeech(
+        @Body body: RequestBody
+    ): ApiResult<SttResponse>
 }
 
 // ============================================================================
@@ -248,19 +219,17 @@ data class GameProfileResponse(
 
 // ---------- 作业 ----------
 
-data class OcrResponse(
-    val text: String?,
-    val results: List<Any>?
+data class HomeworkSubmitAsyncResponse(
+    val recordId: Long
 )
 
-data class HomeworkSubmitResponse(
+data class HomeworkStatusResponse(
     val id: Long? = null,
-    val userId: Long? = null,
+    val status: String? = null,   // PENDING / PROCESSING / COMPLETED / FAILED
     val ocrText: String? = null,
     val subject: String? = null,
     val score: Int? = null,
-    val feedback: String? = null,
-    val status: String? = null
+    val gradingResult: String? = null
 )
 
 // ---------- 挑战系统 ----------
@@ -397,4 +366,10 @@ data class SkillProgressResponse(
     val totalAttempts: Int,
     val averageScore: Int,
     val totalChallenges: Int
+)
+
+// ---------- 语音识别 ----------
+
+data class SttResponse(
+    val text: String
 )

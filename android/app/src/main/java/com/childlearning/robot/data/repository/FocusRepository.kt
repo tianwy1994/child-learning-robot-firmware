@@ -58,7 +58,7 @@ class FocusRepository @Inject constructor(
      * 对应固件 FocusManager::getStatus() — 每 30 秒轮询
      * 返回 null 表示无活跃会话，返回 FocusStatusData 包含可能的提醒
      */
-    suspend fun getStatus(): Result<FocusStatusData?> {
+    suspend fun getStatus(): Result<FocusSessionResponse?> {
         return try {
             val response = apiService.getFocusStatus()
             if (response.isSuccess) {

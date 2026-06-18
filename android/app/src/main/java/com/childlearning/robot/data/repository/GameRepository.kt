@@ -16,7 +16,7 @@ import javax.inject.Singleton
  * - getProfile 返回 level, experience, streakDays
  */
 @Singleton
-class GameRepository @Inject constructor(
+class GameRepository(
     private val apiService: ApiService
 ) {
     /**

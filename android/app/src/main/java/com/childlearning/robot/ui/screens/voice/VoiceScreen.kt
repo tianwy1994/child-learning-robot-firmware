@@ -1,5 +1,10 @@
 package com.childlearning.robot.ui.screens.voice
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -7,12 +12,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.childlearning.robot.domain.enums.AppState
 import com.childlearning.robot.ui.components.ChatBubble
@@ -22,9 +29,6 @@ import com.childlearning.robot.ui.theme.*
 /**
  * 语音交互界面
  * 对应固件 STATE_LISTENING → STATE_PROCESSING → STATE_SPEAKING
- *
- * 固件用物理按键（长按录音，松手发送）
- * Android 改为触摸长按按钮
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +39,24 @@ fun VoiceScreen(
     val uiState by viewModel.uiState.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val listState = rememberLazyListState()
+    val context = LocalContext.current
+
+    // 录音权限
+    var hasRecordPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                    == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasRecordPermission = granted
+        if (!granted) {
+            Toast.makeText(context, "需要录音权限才能使用语音功能", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // 自动滚动
     LaunchedEffect(messages.size) {
@@ -43,24 +65,24 @@ fun VoiceScreen(
         }
     }
 
-    // 状态颜色 — 对应固件 DisplayManager 的 LED 颜色
+    // 状态颜色
     val statusColor by animateColorAsState(
         targetValue = when (uiState.appState) {
-            is AppState.Listening -> Error          // 红色 — 录音中
-            is AppState.Processing -> Warning       // 黄色 — 处理中
-            is AppState.Speaking -> Secondary       // 蓝色 — 播放中
+            is AppState.Listening -> Error
+            is AppState.Processing -> Warning
+            is AppState.Speaking -> Secondary
             is AppState.Error -> Error
-            else -> Primary                         // 绿色 — 空闲
+            else -> Primary
         },
         label = "statusColor"
     )
 
     val statusText = when (uiState.appState) {
-        is AppState.Listening -> "正在听..."
-        is AppState.Processing -> "思考中..."
-        is AppState.Speaking -> "播放中..."
-        is AppState.Error -> "出错了"
-        else -> "准备好了"
+        is AppState.Listening -> "🎙️ 正在听你说话..."
+        is AppState.Processing -> "🧠 思考中..."
+        is AppState.Speaking -> "🔊 播放中..."
+        is AppState.Error -> "❌ 出错了"
+        else -> "🎤 按住按钮开始说话"
     }
 
     Scaffold(
@@ -69,7 +91,7 @@ fun VoiceScreen(
                 title = { Text("语音对话") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
             )
@@ -81,7 +103,7 @@ fun VoiceScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 状态指示条 — 对应固件 RGB LED
+            // 状态指示条
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -120,7 +142,7 @@ fun VoiceScreen(
                 )
             }
 
-            // 语音按钮 — 对应固件 ButtonManager 的长按录音
+            // 语音按钮
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -130,8 +152,18 @@ fun VoiceScreen(
                 VoiceButton(
                     isRecording = uiState.appState is AppState.Listening,
                     isProcessing = uiState.appState is AppState.Processing,
-                    onRecordStart = { viewModel.startRecording() },
-                    onRecordStop = { viewModel.stopRecordingAndProcess() }
+                    onRecordStart = {
+                        if (hasRecordPermission) {
+                            viewModel.startRecording()
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                    onRecordStop = {
+                        if (hasRecordPermission) {
+                            viewModel.stopRecordingAndProcess()
+                        }
+                    }
                 )
             }
         }

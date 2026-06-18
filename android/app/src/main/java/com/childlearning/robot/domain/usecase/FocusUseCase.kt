@@ -1,7 +1,7 @@
 package com.childlearning.robot.domain.usecase
 
 import com.childlearning.robot.core.audio.TtsPlayer
-import com.childlearning.robot.core.network.FocusStatusData
+import com.childlearning.robot.core.network.FocusSessionResponse
 import com.childlearning.robot.data.repository.FocusRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow

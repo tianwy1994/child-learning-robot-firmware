@@ -3,6 +3,7 @@ package com.childlearning.robot.data.repository
 import android.content.Context
 import android.net.Uri
 import com.childlearning.robot.core.network.ApiService
+import com.childlearning.robot.core.network.HomeworkStatusResponse
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -11,42 +12,19 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * 作业仓库
- *
- * 对应硬件服务端接口：
- * - POST /api/hardware/homework/ocr (multipart: file)
- * - POST /api/hardware/homework/submit (multipart: file + subject)
- */
 @Singleton
 class HomeworkRepository @Inject constructor(
     private val apiService: ApiService,
     private val context: Context
 ) {
-    /**
-     * 提交作业图片进行 OCR 识别
-     */
-    suspend fun submitForOcr(imageUri: Uri): Result<String?> {
-        return try {
-            val file = uriToFile(imageUri)
-            val requestBody = file.asRequestBody("image/jpeg".toMediaType())
-            val filePart = MultipartBody.Part.createFormData("file", file.name, requestBody)
+    data class HomeworkResult(
+        val ocrText: String?,
+        val score: Int?,
+        val feedback: String?
+    )
 
-            val response = apiService.homeworkOcr(filePart)
-            if (response.isSuccess) {
-                Result.success(response.data?.text)
-            } else {
-                Result.failure(Exception("OCR 识别失败"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * 提交作业（带科目）
-     */
-    suspend fun submitHomework(imageUri: Uri, subject: String): Result<Unit> {
+    /** 提交作业，立即返回 recordId，服务端后台异步批改 */
+    suspend fun submitHomework(imageUri: Uri, subject: String): Result<Long> {
         return try {
             val file = uriToFile(imageUri)
             val requestBody = file.asRequestBody("image/jpeg".toMediaType())
@@ -55,9 +33,23 @@ class HomeworkRepository @Inject constructor(
 
             val response = apiService.submitHomework(filePart, subjectPart)
             if (response.isSuccess) {
-                Result.success(Unit)
+                Result.success(response.data!!.recordId)
             } else {
-                Result.failure(Exception("提交作业失败"))
+                Result.failure(Exception("提交失败"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 查询批改状态，status: PENDING / PROCESSING / COMPLETED / FAILED */
+    suspend fun getHomeworkStatus(recordId: Long): Result<HomeworkStatusResponse> {
+        return try {
+            val response = apiService.getHomeworkStatus(recordId)
+            if (response.isSuccess && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception("查询状态失败"))
             }
         } catch (e: Exception) {
             Result.failure(e)

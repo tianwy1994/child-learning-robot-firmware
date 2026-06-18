@@ -3,7 +3,9 @@ package com.childlearning.robot.data.repository
 import com.childlearning.robot.core.network.ApiResult
 import com.childlearning.robot.core.network.ApiService
 import com.childlearning.robot.core.network.ChallengeDetailResponse
+import com.childlearning.robot.core.network.ChallengeDragSubmitRequest
 import com.childlearning.robot.core.network.ChallengeEvaluationResponse
+import com.childlearning.robot.core.network.ChallengeSubmitRequest
 import com.childlearning.robot.core.network.DailyChallengesResponse
 import com.childlearning.robot.core.network.SkillProgressResponse
 import okhttp3.ResponseBody
@@ -41,11 +43,3 @@ class ChallengeRepository @Inject constructor(
         return apiService.speakFeedback(text)
     }
 }
-
-data class ChallengeSubmitRequest(
-    val response: String
-)
-
-data class ChallengeDragSubmitRequest(
-    val mapping: Map<String, String>
-)
