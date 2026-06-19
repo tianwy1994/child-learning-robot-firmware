@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,9 +29,9 @@ import com.childlearning.robot.ui.screens.voice.VoiceScreen
  * 应用导航
  *
  * 启动流程：
- * 1. 默认进入首页（无需登录即可浏览）
- * 2. 使用功能时如未认证，401 拦截 → 跳到选择页（登录/绑定二选一）
- * 3. 认证成功后返回首页
+ * 1. 未登录/未绑定 → 直接进入认证选择页（登录或绑定设备）
+ * 2. 已认证 → 进入首页
+ * 3. 使用功能时如遇 401 → 跳到选择页重新认证
  */
 @Composable
 fun AppNavigation(
@@ -38,6 +40,9 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val authState by authUseCase.authState.collectAsState(initial = AuthState.Locked)
+
+    // 根据认证状态决定启动页面
+    val startDestination = if (authState == AuthState.Authenticated) "home" else "auth-choice"
 
     // 监听 401 未授权事件 → 跳到选择页
     LaunchedEffect(Unit) {
@@ -48,7 +53,7 @@ fun AppNavigation(
         }
     }
 
-    NavHost(navController = navController, startDestination = "home") {
+    NavHost(navController = navController, startDestination = startDestination) {
         // ===== 首页 =====
         composable("home") {
             HomeScreen(
@@ -108,20 +113,39 @@ fun AppNavigation(
         composable("homework") { HomeworkScreen(onBack = { navController.popBackStack() }) }
 
         // ===== 挑战 =====
+        // 题库题目临时存储（跨屏幕传递）
+        var pendingBankQuestion: com.childlearning.robot.core.network.ChallengeDetailResponse? by
+            androidx.compose.runtime.mutableStateOf(null)
+
         composable("challenge-list") {
+            val listViewModel: com.childlearning.robot.ui.screens.challenge.ChallengeViewModel =
+                androidx.hilt.navigation.compose.hiltViewModel()
             ChallengeListScreen(
-                onChallengeClick = { challengeId ->
+                onChallengeClick = { challengeId, bankQuestion ->
+                    pendingBankQuestion = bankQuestion
                     navController.navigate("challenge-detail/$challengeId")
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                viewModel = listViewModel
             )
         }
 
         composable("challenge-detail/{challengeId}") { backStackEntry ->
             val challengeId = backStackEntry.arguments?.getString("challengeId")?.toLongOrNull() ?: 0
+            val listBackStackEntry = navController.getBackStackEntry("challenge-list")
+            val listViewModel: com.childlearning.robot.ui.screens.challenge.ChallengeViewModel =
+                androidx.hilt.navigation.compose.hiltViewModel(listBackStackEntry)
+            val bankQ = pendingBankQuestion
+
+            // 统一使用选择模式（拖拽题自动转为选项展示）
             ChallengeDetailScreen(
                 challengeId = challengeId,
-                onBack = { navController.popBackStack() }
+                bankQuestion = bankQ,
+                onBack = { navController.popBackStack() },
+                onNextBankQuestion = { currentId, domainKey ->
+                    listViewModel.nextBankQuestion(currentId, domainKey)
+                },
+                viewModel = listViewModel
             )
         }
     }

@@ -17,8 +17,8 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    const val HARDWARE_BASE_URL = "http://192.168.31.117:8080/"
-    const val AUTH_BASE_URL = "http://192.168.31.117:8081/"
+    const val HARDWARE_BASE_URL = "http://192.168.0.112:8080/"
+    const val AUTH_BASE_URL = "http://192.168.0.112:8081/"
 
     private const val CONNECT_TIMEOUT = 15L
     private const val READ_TIMEOUT = 30L

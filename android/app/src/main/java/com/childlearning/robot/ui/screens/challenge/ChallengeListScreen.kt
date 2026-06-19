@@ -1,6 +1,7 @@
 package com.childlearning.robot.ui.screens.challenge
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.childlearning.robot.core.network.ChallengeDetailResponse
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,53 +35,75 @@ private data class DomainInfo(
     val key: String,
     val name: String,
     val icon: String,
-    val gradient: List<Color>
+    val gradient: List<Color>,
+    val glow: Color
 )
 
 private val domains = listOf(
-    DomainInfo("ALL", "全部", "🌟", listOf(Color(0xFF6C63FF), Color(0xFF9C27B0))),
-    DomainInfo("ENGLISH", "英语读写", "🔤", listOf(Color(0xFF667eea), Color(0xFF764ba2))),
-    DomainInfo("SCIENCE", "科学思维", "🔬", listOf(Color(0xFF11998e), Color(0xFF38ef7d))),
-    DomainInfo("VALUES", "价值观", "💝", listOf(Color(0xFFf093fb), Color(0xFFf5576c))),
-    DomainInfo("LOGIC", "逻辑推理", "🧩", listOf(Color(0xFFa18cd1), Color(0xFFfbc2eb))),
-    DomainInfo("ENGINEERING", "工科理工", "⚙️", listOf(Color(0xFFf6d365), Color(0xFFfda085))),
-    DomainInfo("PATRIOTISM", "爱国教育", "🇨🇳", listOf(Color(0xFFff6b6b), Color(0xFFee5a24))),
-    DomainInfo("COMPREHENSION", "阅读理解", "📖", listOf(Color(0xFF4facfe), Color(0xFF00f2fe))),
-    DomainInfo("MATH", "数学", "🔢", listOf(Color(0xFF43e97b), Color(0xFF38f9d7))),
-    DomainInfo("LIFESKILL", "生活技能", "🏠", listOf(Color(0xFFfa709a), Color(0xFFfee140))),
-    DomainInfo("CREATIVITY", "创意创造", "🎨", listOf(Color(0xFFa18cd1), Color(0xFF5f27cd))),
+    DomainInfo("ENGLISH", "语言星云", "🔤", listOf(Color(0xFF667eea), Color(0xFF764ba2)), Color(0xFF667eea)),
+    DomainInfo("SCIENCE", "科学实验室", "🔬", listOf(Color(0xFF11998e), Color(0xFF38ef7d)), Color(0xFF11998e)),
+    DomainInfo("VALUES", "品德之心", "💝", listOf(Color(0xFFf093fb), Color(0xFFf5576c)), Color(0xFFf093fb)),
+    DomainInfo("LOGIC", "逻辑迷宫", "🧩", listOf(Color(0xFFa18cd1), Color(0xFFfbc2eb)), Color(0xFFa18cd1)),
+    DomainInfo("ENGINEERING", "工程基地", "⚙️", listOf(Color(0xFFf6d365), Color(0xFFfda085)), Color(0xFFf6d365)),
+    DomainInfo("PATRIOTISM", "红旗星", "🇨🇳", listOf(Color(0xFFff6b6b), Color(0xFFee5a24)), Color(0xFFff6b6b)),
+    DomainInfo("COMPREHENSION", "知识图书馆", "📖", listOf(Color(0xFF4facfe), Color(0xFF00f2fe)), Color(0xFF4facfe)),
+    DomainInfo("MATH", "数字星球", "🔢", listOf(Color(0xFF43e97b), Color(0xFF38f9d7)), Color(0xFF43e97b)),
+    DomainInfo("LIFESKILL", "生活花园", "🏠", listOf(Color(0xFFfa709a), Color(0xFFfee140)), Color(0xFFfa709a)),
+    DomainInfo("CREATIVITY", "创意工坊", "🎨", listOf(Color(0xFFa18cd1), Color(0xFF5f27cd)), Color(0xFFa18cd1)),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChallengeListScreen(
-    onChallengeClick: (Long) -> Unit,
+    onChallengeClick: (Long, ChallengeDetailResponse?) -> Unit,
     onBack: () -> Unit = {},
     viewModel: ChallengeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val challenges by viewModel.dailyChallenges.collectAsState()
-    var selectedDomain by remember { mutableStateOf("ALL") }
+    val dailyChallenges by viewModel.dailyChallenges.collectAsState()
+    val bankQuestions by viewModel.bankQuestions.collectAsState()
+    var selectedDomain by remember { mutableStateOf("ENGLISH") }
+    var isBankMode by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadDailyChallenges()
+        viewModel.loadBankQuestions("ENGLISH")
     }
 
-    // 筛选后的题目
-    val filteredChallenges = if (selectedDomain == "ALL") challenges
-    else challenges.filter { it.domainKey == selectedDomain }
+    // 当前展示的题目
+    val displayChallenges = if (isBankMode) bankQuestions else dailyChallenges
+
+    // Space exploration dark theme colors
+    val bgDeep = Color(0xFF0a0e1a)
+    val bgSurface = Color(0xFF111827)
+    val cardBg = Color(0xFF1e293b)
+    val textPrimary = Color(0xFFe8ecf4)
+    val textSecondary = Color(0xFF8892b0)
+    val accentPrimary = Color(0xFF6366f1)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("魔法挑战乐园") },
+                title = {
+                    Column {
+                        Text(
+                            "星际探索",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                        Text(
+                            "穿越知识星系，点亮每一颗星球",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF6C63FF),
+                    containerColor = bgDeep,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -90,43 +114,59 @@ fun ChallengeListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFF8F9FE))
+                .background(bgDeep)
         ) {
-            // ===== 领域分类 Tab =====
+            // ===== Planet Belt (领域星球带) =====
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF6C63FF))
+                    .background(bgDeep)
                     .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 12.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 domains.forEach { domain ->
                     val isSelected = selectedDomain == domain.key
-                    val bgColor by animateColorAsState(
-                        targetValue = if (isSelected) Color.White else Color.White.copy(alpha = 0.2f),
-                        animationSpec = tween(200), label = "tabBg"
+                    val sphereAlpha by animateFloatAsState(
+                        targetValue = if (isSelected) 1f else 0.6f,
+                        animationSpec = tween(200), label = "sphereAlpha"
                     )
                     val textColor by animateColorAsState(
-                        targetValue = if (isSelected) domain.gradient[0] else Color.White,
-                        animationSpec = tween(200), label = "tabText"
+                        targetValue = if (isSelected) Color.White else textSecondary,
+                        animationSpec = tween(200), label = "planetText"
                     )
 
-                    Row(
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(bgColor)
-                            .clickable { selectedDomain = domain.key }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .clickable {
+                                selectedDomain = domain.key
+                                isBankMode = true
+                                viewModel.loadBankQuestions(domain.key)
+                            }
+                            .padding(vertical = 4.dp)
                     ) {
-                        Text(text = domain.icon, fontSize = 16.sp)
-                        Spacer(modifier = Modifier.width(4.dp))
+                        // Planet sphere
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(26.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        domain.gradient.map { it.copy(alpha = sphereAlpha) }
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = domain.icon, fontSize = 22.sp)
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = domain.name,
-                            fontSize = 13.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = textColor
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = textColor,
+                            maxLines = 1
                         )
                     }
                 }
@@ -136,27 +176,27 @@ fun ChallengeListScreen(
             when (uiState) {
                 is ChallengeUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFF6C63FF))
+                        CircularProgressIndicator(color = accentPrimary)
                     }
                 }
                 is ChallengeUiState.Error -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             text = "😢 ${(uiState as ChallengeUiState.Error).message}",
-                            color = Color(0xFF999999),
+                            color = textSecondary,
                             fontSize = 15.sp
                         )
                     }
                 }
                 is ChallengeUiState.Success -> {
-                    if (filteredChallenges.isEmpty()) {
+                    if (displayChallenges.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(text = "📚", fontSize = 48.sp)
+                                Text(text = "🌌", fontSize = 48.sp)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = if (selectedDomain == "ALL") "暂无题目" else "该领域暂无题目",
-                                    color = Color(0xFF999999),
+                                    text = "该星球暂无探索题目",
+                                    color = textSecondary,
                                     fontSize = 15.sp
                                 )
                             }
@@ -167,11 +207,20 @@ fun ChallengeListScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp)
                         ) {
-                            items(filteredChallenges, key = { it.id }) { challenge ->
-                                ChallengeItem(
-                                    challenge = challenge,
-                                    onClick = { onChallengeClick(challenge.id) }
-                                )
+                            if (isBankMode) {
+                                items(bankQuestions, key = { it.id }) { q ->
+                                    BankQuestionItem(
+                                        question = q,
+                                        onClick = { onChallengeClick(q.id, q) }
+                                    )
+                                }
+                            } else {
+                                items(dailyChallenges, key = { it.id }) { challenge ->
+                                    ChallengeItem(
+                                        challenge = challenge,
+                                        onClick = { onChallengeClick(challenge.id, null) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -194,8 +243,9 @@ fun ChallengeItem(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1e293b)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
     ) {
         Row(
             modifier = Modifier
@@ -204,7 +254,7 @@ fun ChallengeItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 领域图标
+            // Domain icon with gradient
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -220,14 +270,14 @@ fun ChallengeItem(
                     text = challenge.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A2E),
+                    color = Color(0xFFe8ecf4),
                     maxLines = 1
                 )
 
                 Text(
                     text = challenge.description,
                     fontSize = 12.sp,
-                    color = Color(0xFF999999),
+                    color = Color(0xFF8892b0),
                     maxLines = 1,
                     modifier = Modifier.padding(top = 2.dp)
                 )
@@ -245,6 +295,98 @@ fun ChallengeItem(
                 }
             }
         }
+    }
+}
+
+/**
+ * 题库题目卡片（ChallengeDetailResponse 格式）
+ */
+@Composable
+fun BankQuestionItem(
+    question: ChallengeDetailResponse,
+    onClick: () -> Unit
+) {
+    val domainColor = getDomainColor(question.domainKey)
+    val icon = getDomainIcon(question.domainKey)
+    val typeEmoji = when (question.type) {
+        "CHOICE" -> "📝"
+        "JUDGE" -> "✅"
+        else -> "✏️"
+    }
+    val typeName = when (question.type) {
+        "CHOICE" -> "选择"
+        "JUDGE" -> "判断"
+        else -> "填空"
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1e293b)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Brush.linearGradient(getDomainGradient(question.domainKey))),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = icon, fontSize = 24.sp)
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = question.title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFe8ecf4),
+                    maxLines = 1
+                )
+                Text(
+                    text = question.description,
+                    fontSize = 12.sp,
+                    color = Color(0xFF8892b0),
+                    maxLines = 1,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 6.dp)
+                ) {
+                    LevelBadge(text = question.domainName, color = domainColor)
+                    LevelBadge(text = "⭐".repeat(question.difficulty.coerceIn(1, 5)), color = Color(0xFFFF9800))
+                    LevelBadge(text = "+${question.expReward}", color = Color(0xFF10b981))
+                    LevelBadge(text = "$typeEmoji $typeName", color = Color(0xFF6366f1))
+                }
+            }
+        }
+    }
+}
+
+private fun getDomainIcon(domainKey: String): String {
+    return when (domainKey) {
+        "ENGLISH" -> "🔤"
+        "SCIENCE" -> "🔬"
+        "VALUES" -> "💝"
+        "LOGIC" -> "🧩"
+        "ENGINEERING" -> "⚙️"
+        "PATRIOTISM" -> "🇨🇳"
+        "COMPREHENSION" -> "📖"
+        "MATH" -> "🔢"
+        "LIFESKILL" -> "🏠"
+        "CREATIVITY" -> "🎨"
+        else -> "🌟"
     }
 }
 

@@ -103,6 +103,22 @@ interface ApiService {
     @Headers("Accept: audio/mpeg")
     suspend fun speakFeedback(@Query("text") text: String): Response<ResponseBody>
 
+    // ---------- 题库挑战 ----------
+    @GET("api/hardware/challenge/bank/{domainKey}")
+    suspend fun getBankQuestions(@Path("domainKey") domainKey: String): ApiResult<List<ChallengeDetailResponse>>
+
+    @POST("api/hardware/challenge/bank/{bankId}/submit")
+    suspend fun submitBankAnswer(
+        @Path("bankId") bankId: Long,
+        @Body body: ChallengeSubmitRequest
+    ): ApiResult<BankEvaluationResponse>
+
+    @POST("api/hardware/challenge/bank/{bankId}/submit-drag")
+    suspend fun submitBankDragAnswer(
+        @Path("bankId") bankId: Long,
+        @Body body: ChallengeDragSubmitRequest
+    ): ApiResult<BankEvaluationResponse>
+
     // ---------- 语音识别 ----------
 
     @POST("api/hardware/stt/recognize")
@@ -356,6 +372,18 @@ data class ChallengeEvaluationResponse(
     val stars: Int = 1,
     val expEarned: Int = 0,
     val newLevel: Int = 1
+)
+
+data class BankEvaluationResponse(
+    val score: Int,
+    val correct: Boolean = false,
+    val correctCount: Int? = null,
+    val totalSlots: Int? = null,
+    val encourage: String,
+    val explanation: String? = null,
+    val stars: Int = 1,
+    val expEarned: Int = 0,
+    val replacement: ChallengeDetailResponse? = null
 )
 
 data class SkillProgressResponse(

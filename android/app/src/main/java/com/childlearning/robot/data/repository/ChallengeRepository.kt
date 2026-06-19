@@ -2,6 +2,7 @@ package com.childlearning.robot.data.repository
 
 import com.childlearning.robot.core.network.ApiResult
 import com.childlearning.robot.core.network.ApiService
+import com.childlearning.robot.core.network.BankEvaluationResponse
 import com.childlearning.robot.core.network.ChallengeDetailResponse
 import com.childlearning.robot.core.network.ChallengeDragSubmitRequest
 import com.childlearning.robot.core.network.ChallengeEvaluationResponse
@@ -41,5 +42,18 @@ class ChallengeRepository @Inject constructor(
 
     suspend fun speakFeedback(text: String): Response<ResponseBody> {
         return apiService.speakFeedback(text)
+    }
+
+    // ---------- 题库挑战 ----------
+    suspend fun getBankQuestions(domainKey: String): ApiResult<List<ChallengeDetailResponse>> {
+        return apiService.getBankQuestions(domainKey)
+    }
+
+    suspend fun submitBankAnswer(bankId: Long, response: String): ApiResult<BankEvaluationResponse> {
+        return apiService.submitBankAnswer(bankId, ChallengeSubmitRequest(response))
+    }
+
+    suspend fun submitBankDragAnswer(bankId: Long, mapping: Map<String, String>): ApiResult<BankEvaluationResponse> {
+        return apiService.submitBankDragAnswer(bankId, ChallengeDragSubmitRequest(mapping))
     }
 }

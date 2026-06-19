@@ -46,7 +46,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChallengeDetailScreen(
     challengeId: Long,
+    bankQuestion: ChallengeDetailResponse? = null,
     onBack: () -> Unit,
+    onNextBankQuestion: ((Long, String) -> Unit)? = null,
     viewModel: ChallengeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -56,9 +58,15 @@ fun ChallengeDetailScreen(
 
     var selectedOption by remember { mutableStateOf<String?>(null) }
     var showConfetti by remember { mutableStateOf(false) }
+    val isBankMode = bankQuestion != null
 
     LaunchedEffect(challengeId) {
-        viewModel.loadChallengeDetail(challengeId)
+        if (bankQuestion != null) {
+            // 题库模式：直接用传入的数据，不发API请求
+            viewModel.setCurrentChallenge(bankQuestion)
+        } else {
+            viewModel.loadChallengeDetail(challengeId)
+        }
     }
 
     LaunchedEffect(uiState) {
@@ -96,9 +104,10 @@ fun ChallengeDetailScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { viewModel.speakQuestion(challengeId) }) {
-                        Text("🔊 朗读", color = Color(0xFF6C63FF))
-                    }
+                    // 朗读功能暂时注释（合成语音太慢）
+                    // TextButton(onClick = { viewModel.speakQuestion(challengeId) }) {
+                    //     Text("🔊 朗读", color = Color(0xFF6C63FF))
+                    // }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.White,
@@ -144,14 +153,32 @@ fun ChallengeDetailScreen(
                                 if (uiState !is ChallengeUiState.Evaluated && uiState !is ChallengeUiState.Submitting) {
                                     selectedOption = option
                                     vibrate(context, 30)
-                                    viewModel.submitAnswer(challengeId, option)
+                                    if (isBankMode) {
+                                        // 题库模式：用 drag 接口提交（answer 是字母，text 接口会判错）
+                                        val options = ch.options
+                                        val optionIndex = options.indexOf(option)
+                                        if (optionIndex >= 0) {
+                                            val cardId = optionIndex + 1
+                                            val slotId = 1
+                                            viewModel.submitBankDragAnswer(ch.id, mapOf(slotId.toString() to cardId.toString()))
+                                        } else {
+                                            // fallback: 文字提交
+                                            viewModel.submitBankAnswer(ch.id, option)
+                                        }
+                                    } else {
+                                        viewModel.submitAnswer(ch.id, option)
+                                    }
                                 }
                             },
                             uiState = uiState,
                             evalResult = evalResult,
                             onContinue = {
                                 viewModel.resetEvaluation()
-                                onBack()
+                                if (isBankMode && onNextBankQuestion != null) {
+                                    onNextBankQuestion(challenge?.id ?: challengeId, challenge?.domainKey ?: "")
+                                } else {
+                                    onBack()
+                                }
                             }
                         )
                     }

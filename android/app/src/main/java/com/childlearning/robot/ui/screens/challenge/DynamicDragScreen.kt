@@ -66,7 +66,9 @@ import kotlin.math.roundToInt
 @Composable
 fun DynamicDragScreen(
     challengeId: Long,
+    bankQuestion: com.childlearning.robot.core.network.ChallengeDetailResponse? = null,
     onBack: () -> Unit,
+    onNextBankQuestion: ((Long, String) -> Unit)? = null,
     viewModel: ChallengeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -77,9 +79,14 @@ fun DynamicDragScreen(
     var draggedCard by remember { mutableStateOf<DragCard?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var showConfetti by remember { mutableStateOf(false) }
+    val isBankMode = bankQuestion != null
 
     LaunchedEffect(challengeId) {
-        viewModel.loadChallengeDetail(challengeId)
+        if (bankQuestion != null) {
+            viewModel.setCurrentChallenge(bankQuestion)
+        } else {
+            viewModel.loadChallengeDetail(challengeId)
+        }
     }
 
     LaunchedEffect(uiState) {
@@ -314,7 +321,11 @@ fun DynamicDragScreen(
                                 onClick = {
                                     val mapping = slotCardMap.mapKeys { it.key.toString() }
                                         .mapValues { it.value.toString() }
-                                    viewModel.submitDragAnswer(ch.id, mapping)
+                                    if (isBankMode) {
+                                        viewModel.submitBankDragAnswer(ch.id, mapping)
+                                    } else {
+                                        viewModel.submitDragAnswer(ch.id, mapping)
+                                    }
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -334,6 +345,9 @@ fun DynamicDragScreen(
                                     result = result,
                                     onContinue = {
                                         viewModel.resetEvaluation()
+                                        if (isBankMode && onNextBankQuestion != null) {
+                                            onNextBankQuestion(challengeId, challenge?.domainKey ?: "")
+                                        }
                                         onBack()
                                     }
                                 )
