@@ -62,11 +62,12 @@ fun ChallengeListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val dailyChallenges by viewModel.dailyChallenges.collectAsState()
     val bankQuestions by viewModel.bankQuestions.collectAsState()
-    var selectedDomain by remember { mutableStateOf("ENGLISH") }
+    val selectedDomain by viewModel.selectedDomain.collectAsState()
     var isBankMode by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadBankQuestions("ENGLISH")
+        // 首次进入时加载当前选中的领域（默认 ENGLISH）
+        viewModel.loadBankQuestions(selectedDomain)
     }
 
     // 当前展示的题目
@@ -140,7 +141,6 @@ fun ChallengeListScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .clickable {
-                                selectedDomain = domain.key
                                 isBankMode = true
                                 viewModel.loadBankQuestions(domain.key)
                             }

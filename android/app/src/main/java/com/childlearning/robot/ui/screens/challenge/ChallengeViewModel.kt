@@ -29,6 +29,10 @@ class ChallengeViewModel @Inject constructor(
     private val _bankQuestions = MutableStateFlow<List<ChallengeDetailResponse>>(emptyList())
     val bankQuestions: StateFlow<List<ChallengeDetailResponse>> = _bankQuestions.asStateFlow()
 
+    // 当前选中的领域（保持 tab 状态）
+    private val _selectedDomain = MutableStateFlow("ENGLISH")
+    val selectedDomain: StateFlow<String> = _selectedDomain.asStateFlow()
+
     // 当前正在做的题（可以是 daily 或 bank）
     private val _currentChallenge = MutableStateFlow<ChallengeDetailResponse?>(null)
     val currentChallenge: StateFlow<ChallengeDetailResponse?> = _currentChallenge.asStateFlow()
@@ -126,6 +130,7 @@ class ChallengeViewModel @Inject constructor(
     // ========== 题库挑战 ==========
 
     fun loadBankQuestions(domainKey: String) {
+        _selectedDomain.value = domainKey
         viewModelScope.launch {
             _uiState.value = ChallengeUiState.Loading
             try {
