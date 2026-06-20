@@ -125,6 +125,40 @@ interface ApiService {
     suspend fun recognizeSpeech(
         @Body body: RequestBody
     ): ApiResult<SttResponse>
+
+    // ---------- 主动消息 ----------
+
+    @GET("api/hardware/proactive/messages")
+    suspend fun getProactiveMessages(): ApiResult<List<ProactiveMessageResponse>>
+
+    @GET("api/hardware/proactive/count")
+    suspend fun getProactiveCount(): ApiResult<ProactiveCountResponse>
+
+    // ---------- 每日任务 ----------
+
+    @GET("api/hardware/quests/today")
+    suspend fun getTodayQuests(): ApiResult<List<DailyQuestResponse>>
+
+    // ---------- 每日惊喜 ----------
+
+    @GET("api/hardware/surprise/today")
+    suspend fun getDailySurprise(): ApiResult<DailySurpriseResponse>
+
+    // ---------- 积分商城 ----------
+
+    @GET("api/hardware/shop/items")
+    suspend fun getShopItems(): ApiResult<List<ShopItemResponse>>
+
+    @GET("api/hardware/shop/purchases")
+    suspend fun getMyPurchases(): ApiResult<List<UserPurchaseResponse>>
+
+    @POST("api/hardware/shop/buy/{itemId}")
+    suspend fun buyItem(@Path("itemId") itemId: Long): ApiResult<UserPurchaseResponse>
+
+    // ---------- 环境音 ----------
+
+    @GET("api/hardware/focus/ambient-sounds")
+    suspend fun getAmbientSounds(): ApiResult<List<AmbientSoundResponse>>
 }
 
 // ============================================================================
@@ -400,4 +434,70 @@ data class SkillProgressResponse(
 
 data class SttResponse(
     val text: String
+)
+
+// ---------- 主动消息 ----------
+
+data class ProactiveMessageResponse(
+    val id: Long,
+    val type: String,
+    val message: String,
+    val createdAt: String? = null
+)
+
+data class ProactiveCountResponse(
+    val count: Int
+)
+
+// ---------- 每日任务 ----------
+
+data class DailyQuestResponse(
+    val id: Long,
+    val questType: String,
+    val description: String,
+    val icon: String? = null,
+    val targetValue: Int,
+    val currentValue: Int,
+    val expReward: Int,
+    val completed: Boolean = false
+)
+
+// ---------- 每日惊喜 ----------
+
+data class DailySurpriseResponse(
+    val alreadyClaimed: Boolean = false,
+    val type: String? = null,
+    val title: String? = null,
+    val description: String? = null,
+    val icon: String? = null,
+    val xpBonus: Int = 0
+)
+
+// ---------- 积分商城 ----------
+
+data class ShopItemResponse(
+    val id: Long,
+    val name: String,
+    val description: String? = null,
+    val icon: String? = null,
+    val category: String,
+    val price: Int,
+    val itemData: String? = null
+)
+
+data class UserPurchaseResponse(
+    val id: Long,
+    val itemId: Long,
+    val spentXp: Int,
+    val equipped: Boolean = false,
+    val purchasedAt: String? = null
+)
+
+// ---------- 环境音 ----------
+
+data class AmbientSoundResponse(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val file: String? = null
 )

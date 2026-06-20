@@ -162,14 +162,6 @@ fun AuthChoiceScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "💡 首次使用请选择「扫码绑定」\n已有账号请选择「账号登录」",
-                    fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                    lineHeight = 20.sp
-                )
             }
         }
     }

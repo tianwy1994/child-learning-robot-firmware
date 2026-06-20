@@ -16,6 +16,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.childlearning.robot.ui.theme.GoldStar
 
+/** 等级名称映射 */
+private val LEVEL_NAMES = mapOf(
+    1 to "学习小萌新", 2 to "知识探索者", 3 to "习惯养成师", 4 to "学霸小达人", 5 to "学习小导师",
+    6 to "智慧勇士", 7 to "知识魔法师", 8 to "学习小超人", 9 to "星际探险家", 10 to "传说学霸"
+)
+private val LEVEL_ICONS = mapOf(
+    1 to "🌱", 2 to "🔍", 3 to "🛠️", 4 to "⭐", 5 to "🎓",
+    6 to "⚔️", 7 to "🧙", 8 to "🦸", 9 to "🚀", 10 to "👑"
+)
+
 /**
  * 等级徽章
  * 展示用户等级、经验值、连续签到天数
@@ -38,44 +48,55 @@ fun LevelBadge(
     ) {
         // 等级
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                tint = GoldStar,
-                modifier = Modifier.size(32.dp)
+            Text(
+                text = LEVEL_ICONS[level] ?: "⭐",
+                style = MaterialTheme.typography.headlineMedium
             )
             Text(
                 text = "Lv.$level",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
+            Text(
+                text = LEVEL_NAMES[level] ?: "",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+            )
         }
 
         // 经验
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "经验",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                text = "💎",
+                style = MaterialTheme.typography.headlineMedium
             )
             Text(
                 text = "$experience",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
+            Text(
+                text = "经验值",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+            )
         }
 
         // 连续签到
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "连续签到",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                text = "🔥",
+                style = MaterialTheme.typography.headlineMedium
             )
             Text(
                 text = "${streakDays}天",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                text = "连续签到",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
             )
         }
     }

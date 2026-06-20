@@ -3,9 +3,6 @@ package com.childlearning.robot.ui.screens.home
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,21 +16,29 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.childlearning.robot.core.network.DailyQuestResponse
+import com.childlearning.robot.core.network.DailySurpriseResponse
 import com.childlearning.robot.ui.theme.*
+
+/** 等级名称映射（10 级） */
+private val LEVEL_NAMES = mapOf(
+    1 to "学习小萌新", 2 to "知识探索者", 3 to "习惯养成师", 4 to "学霸小达人", 5 to "学习小导师",
+    6 to "智慧勇士", 7 to "知识魔法师", 8 to "学习小超人", 9 to "星际探险家", 10 to "传说学霸"
+)
+private val LEVEL_ICONS = mapOf(
+    1 to "🌱", 2 to "🔍", 3 to "🛠️", 4 to "⭐", 5 to "🎓",
+    6 to "⚔️", 7 to "🧙", 8 to "🦸", 9 to "🚀", 10 to "👑"
+)
 
 /**
  * 首页 — 作业帮学习机风格
- *
- * 布局：
- * - 顶部渐变欢迎区（机器人头像 + 问候语 + 等级信息）
- * - 功能卡片网格（渐变背景 + 大 emoji + 动画）
- * - 底部设备状态栏
  */
 @Composable
 fun HomeScreen(
@@ -48,6 +53,11 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // 页面重新可见时刷新数据（从挑战页返回等场景）
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshProfile()
+    }
 
     // 呼吸动画
     val infiniteTransition = rememberInfiniteTransition(label = "breath")
@@ -163,6 +173,44 @@ fun HomeScreen(
                             }
                         }
                     }
+
+                    // 主动消息提示
+                    uiState.proactiveMessage?.let { msg ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFE8F5E9)
+                            ),
+                            onClick = { viewModel.dismissProactiveMessage() }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = "💬", fontSize = 20.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = msg,
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF2E7D32),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 每日惊喜弹窗
+            uiState.surprise?.let { surprise ->
+                SurpriseDialog(surprise = surprise, onDismiss = { viewModel.dismissSurprise() })
+            }
+
+            // ===== 每日任务 =====
+            uiState.quests?.let { quests ->
+                if (quests.isNotEmpty()) {
+                    DailyQuestSection(quests = quests)
                 }
             }
 
@@ -284,12 +332,17 @@ private fun LevelCard(
         ) {
             // 等级
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "⭐", fontSize = 28.sp)
+                Text(text = LEVEL_ICONS[level] ?: "⭐", fontSize = 28.sp)
                 Text(
                     text = "Lv.$level",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF6C63FF)
+                )
+                Text(
+                    text = LEVEL_NAMES[level] ?: "",
+                    fontSize = 11.sp,
+                    color = Color(0xFF999999)
                 )
             }
 
@@ -485,6 +538,173 @@ private data class FeatureItem(
     val gradient: List<Color>,
     val onClick: () -> Unit
 )
+
+// ========== 每日任务区域 ==========
+@Composable
+private fun DailyQuestSection(quests: List<DailyQuestResponse>) {
+    val completedCount = quests.count { it.completed }
+
+    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "🌟 今日冒险任务",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A1A2E)
+            )
+            Text(
+                text = "$completedCount/${quests.size}",
+                fontSize = 14.sp,
+                color = Color(0xFF999999)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 进度条
+        LinearProgressIndicator(
+            progress = { if (quests.isNotEmpty()) completedCount.toFloat() / quests.size else 0f },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            color = Color(0xFF6C63FF),
+            trackColor = Color(0xFFEEE8FF),
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        quests.forEach { quest ->
+            QuestItem(quest = quest)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // 全部完成奖励提示
+        if (completedCount >= quests.size) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "🎁", fontSize = 20.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "全部完成！额外奖励 +50 XP",
+                        fontSize = 13.sp,
+                        color = Color(0xFFE65100),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestItem(quest: DailyQuestResponse) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (quest.completed) Color(0xFFF0FFF0) else Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = quest.icon ?: "📌", fontSize = 24.sp)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = quest.description,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (quest.completed) Color(0xFF4CAF50) else Color(0xFF1A1A2E)
+                )
+                if (!quest.completed) {
+                    Text(
+                        text = "进度: ${quest.currentValue}/${quest.targetValue}  奖励: +${quest.expReward} XP",
+                        fontSize = 11.sp,
+                        color = Color(0xFF999999)
+                    )
+                }
+            }
+            if (quest.completed) {
+                Text(text = "✅", fontSize = 24.sp)
+            } else {
+                Text(
+                    text = "+${quest.expReward} XP",
+                    fontSize = 12.sp,
+                    color = Color(0xFF6C63FF),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+// ========== 每日惊喜弹窗 ==========
+@Composable
+private fun SurpriseDialog(surprise: DailySurpriseResponse, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text(text = surprise.icon ?: "🎁", fontSize = 48.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = surprise.title ?: "今日惊喜",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = surprise.description ?: "",
+                    fontSize = 15.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFF4A5568)
+                )
+                if (surprise.xpBonus > 0) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "+${surprise.xpBonus} XP",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFF9800)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF))
+            ) {
+                Text("太棒了！🎉", fontSize = 16.sp)
+            }
+        }
+    )
+}
 
 // ========== 工具函数 ==========
 private fun getGreeting(): String {

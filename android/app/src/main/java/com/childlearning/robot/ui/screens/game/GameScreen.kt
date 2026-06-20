@@ -126,7 +126,18 @@ fun GameScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "• 每日签到获得经验值\n• 专注学习获得经验值\n• 完成作业获得经验值\n• 连续签到有额外奖励",
+                        text = buildString {
+                            appendLine("🌱 Lv.1 学习小萌新 (0 XP)")
+                            appendLine("🔍 Lv.2 知识探索者 (100 XP)")
+                            appendLine("🛠️ Lv.3 习惯养成师 (300 XP)")
+                            appendLine("⭐ Lv.4 学霸小达人 (600 XP)")
+                            appendLine("🎓 Lv.5 学习小导师 (1000 XP)")
+                            appendLine("⚔️ Lv.6 智慧勇士 (1500 XP)")
+                            appendLine("🧙 Lv.7 知识魔法师 (2500 XP)")
+                            appendLine("🦸 Lv.8 学习小超人 (4000 XP)")
+                            appendLine("🚀 Lv.9 星际探险家 (6000 XP)")
+                            append("👑 Lv.10 传说学霸 (10000 XP)")
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
