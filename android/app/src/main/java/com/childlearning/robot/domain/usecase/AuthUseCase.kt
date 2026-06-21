@@ -37,7 +37,13 @@ class AuthUseCase @Inject constructor(
                 tokenStore.saveToken(response.data.token)
                 Result.success(response.data)
             } else {
-                Result.failure(Exception("登录失败: code=${response.code}"))
+                val msg = response.message?.takeIf { it.isNotBlank() }
+                    ?: when (response.code) {
+                        401 -> "手机号或密码错误"
+                        403 -> "账号已被禁用，请联系管理员"
+                        else -> "登录失败，请稍后重试"
+                    }
+                Result.failure(Exception(msg))
             }
         } catch (e: Exception) {
             Result.failure(e)

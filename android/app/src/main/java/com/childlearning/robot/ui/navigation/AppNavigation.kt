@@ -13,7 +13,6 @@ import androidx.navigation.compose.rememberNavController
 import com.childlearning.robot.core.network.AuthInterceptor
 import com.childlearning.robot.domain.enums.AuthState
 import com.childlearning.robot.domain.usecase.AuthUseCase
-import com.childlearning.robot.ui.screens.auth.AuthChoiceScreen
 import com.childlearning.robot.ui.screens.chat.ChatScreen
 import com.childlearning.robot.ui.screens.focus.FocusScreen
 import com.childlearning.robot.ui.screens.game.GameScreen
@@ -22,16 +21,15 @@ import com.childlearning.robot.ui.screens.homework.HomeworkScreen
 import com.childlearning.robot.ui.screens.login.LoginScreen
 import com.childlearning.robot.ui.screens.challenge.ChallengeListScreen
 import com.childlearning.robot.ui.screens.challenge.ChallengeDetailScreen
-import com.childlearning.robot.ui.screens.bind.DeviceBindScreen
 import com.childlearning.robot.ui.screens.voice.VoiceScreen
 
 /**
  * 应用导航
  *
  * 启动流程：
- * 1. 未登录/未绑定 → 直接进入认证选择页（登录或绑定设备）
+ * 1. 未登录 → 进入登录页
  * 2. 已认证 → 进入首页
- * 3. 使用功能时如遇 401 → 跳到选择页重新认证
+ * 3. 使用功能时如遇 401 → 跳回登录页重新认证
  */
 @Composable
 fun AppNavigation(
@@ -42,12 +40,12 @@ fun AppNavigation(
     val authState by authUseCase.authState.collectAsState(initial = AuthState.Locked)
 
     // 根据认证状态决定启动页面
-    val startDestination = if (authState == AuthState.Authenticated) "home" else "auth-choice"
+    val startDestination = if (authState == AuthState.Authenticated) "home" else "login"
 
-    // 监听 401 未授权事件 → 跳到选择页
+    // 监听 401 未授权事件 → 跳回登录页
     LaunchedEffect(Unit) {
         authUseCase.unauthorizedEvent.collect {
-            navController.navigate("auth-choice") {
+            navController.navigate("login") {
                 popUpTo(0) { inclusive = true }
             }
         }
@@ -63,21 +61,12 @@ fun AppNavigation(
                 onNavigateToGame = { navController.navigate("game") },
                 onNavigateToHomework = { navController.navigate("homework") },
                 onNavigateToChallenge = { navController.navigate("challenge-list") },
-                onNavigateToBind = { navController.navigate("auth-choice") },
+                onNavigateToBind = { /* 已移除绑定入口 */ },
                 onLogout = {
-                    navController.navigate("home") {
+                    navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
                 }
-            )
-        }
-
-        // ===== 认证选择（登录/绑定二选一）=====
-        composable("auth-choice") {
-            AuthChoiceScreen(
-                onNavigateToLogin = { navController.navigate("login") },
-                onNavigateToBind = { navController.navigate("bind-device") },
-                onBack = { navController.popBackStack() }
             )
         }
 
@@ -85,18 +74,6 @@ fun AppNavigation(
         composable("login") {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate("home") {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        // ===== 设备绑定 =====
-        composable("bind-device") {
-            DeviceBindScreen(
-                onBindSuccess = {
                     navController.navigate("home") {
                         popUpTo(0) { inclusive = true }
                     }
