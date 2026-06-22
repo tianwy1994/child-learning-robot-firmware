@@ -30,6 +30,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadProfile()
+        loadNickname()
         autoCheckin()
         loadTodayQuests()
         loadDailySurprise()
@@ -40,7 +41,23 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val result = gameUseCase.getProfile()
             if (result.isSuccess) {
-                _uiState.value = _uiState.value.copy(profile = result.getOrNull())
+                val profile = result.getOrNull()
+                _uiState.value = _uiState.value.copy(profile = profile)
+                // 从 profile 获取 nickname（优先级高于本地存储）
+                profile?.nickname?.takeIf { it.isNotBlank() }?.let { nickname ->
+                    _uiState.value = _uiState.value.copy(childNickname = nickname)
+                    authUseCase.saveNickname(nickname)
+                }
+            }
+        }
+    }
+
+    private fun loadNickname() {
+        viewModelScope.launch {
+            authUseCase.nicknameFlow.collect { nickname ->
+                if (_uiState.value.childNickname.isNullOrBlank()) {
+                    _uiState.value = _uiState.value.copy(childNickname = nickname)
+                }
             }
         }
     }
@@ -156,6 +173,7 @@ class HomeViewModel @Inject constructor(
 
 data class HomeUiState(
     val profile: GameProfileResponse? = null,
+    val childNickname: String? = null,
     val checkinMessage: String? = null,
     val quests: List<DailyQuestResponse>? = null,
     val surprise: DailySurpriseResponse? = null,

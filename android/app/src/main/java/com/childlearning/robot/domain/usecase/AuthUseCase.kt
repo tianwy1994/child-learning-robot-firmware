@@ -24,6 +24,12 @@ class AuthUseCase @Inject constructor(
         if (token.isNullOrBlank()) AuthState.Locked else AuthState.Authenticated
     }
 
+    val nicknameFlow: Flow<String?> = tokenStore.nicknameFlow
+
+    suspend fun saveNickname(nickname: String) {
+        tokenStore.saveNickname(nickname)
+    }
+
     private val _unauthorizedEvent = MutableSharedFlow<Unit>()
     val unauthorizedEvent: SharedFlow<Unit> = _unauthorizedEvent
 
@@ -35,6 +41,7 @@ class AuthUseCase @Inject constructor(
             val response = authApiService.login(LoginRequest(phone, password))
             if (response.isSuccess && response.data != null) {
                 tokenStore.saveToken(response.data.token)
+                response.data.nickname?.let { tokenStore.saveNickname(it) }
                 Result.success(response.data)
             } else {
                 val msg = response.message?.takeIf { it.isNotBlank() }

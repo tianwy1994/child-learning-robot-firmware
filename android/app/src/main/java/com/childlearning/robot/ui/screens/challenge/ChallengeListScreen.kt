@@ -40,6 +40,7 @@ private data class DomainInfo(
 )
 
 private val domains = listOf(
+    DomainInfo("SAFETY", "安全堡垒", "🛡️", listOf(Color(0xFF11998e), Color(0xFF38ef7d)), Color(0xFF059669)),
     DomainInfo("ENGLISH", "语言星云", "🔤", listOf(Color(0xFF667eea), Color(0xFF764ba2)), Color(0xFF667eea)),
     DomainInfo("SCIENCE", "科学实验室", "🔬", listOf(Color(0xFF11998e), Color(0xFF38ef7d)), Color(0xFF11998e)),
     DomainInfo("VALUES", "品德之心", "💝", listOf(Color(0xFFf093fb), Color(0xFFf5576c)), Color(0xFFf093fb)),
@@ -376,6 +377,7 @@ fun BankQuestionItem(
 
 private fun getDomainIcon(domainKey: String): String {
     return when (domainKey) {
+        "SAFETY" -> "🛡️"
         "ENGLISH" -> "🔤"
         "SCIENCE" -> "🔬"
         "VALUES" -> "💝"
@@ -392,6 +394,7 @@ private fun getDomainIcon(domainKey: String): String {
 
 fun getDomainColor(domainKey: String): Color {
     return when (domainKey) {
+        "SAFETY" -> Color(0xFF059669)
         "ENGLISH" -> Color(0xFF3b82f6)
         "SCIENCE" -> Color(0xFF10b981)
         "VALUES" -> Color(0xFFec4899)

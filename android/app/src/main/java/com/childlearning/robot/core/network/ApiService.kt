@@ -264,7 +264,8 @@ data class CheckinResponse(
 data class GameProfileResponse(
     val level: Int,
     val experience: Int,
-    val streakDays: Int
+    val streakDays: Int,
+    val nickname: String? = null
 )
 
 // ---------- 作业 ----------

@@ -110,7 +110,8 @@ fun HomeScreen(
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "小智同学 🌟",
+                                text = uiState.childNickname?.takeIf { it.isNotBlank() }
+                                    ?.let { "${it}同学 🌟" } ?: "小智同学 🌟",
                                 color = Color.White,
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold
@@ -146,7 +147,7 @@ fun HomeScreen(
                         )
                     } ?: run {
                         // 未登录时显示默认卡片
-                        DefaultLevelCard()
+                        DefaultLevelCard(childNickname = uiState.childNickname)
                     }
 
                     // 签到提示
@@ -228,11 +229,12 @@ fun HomeScreen(
                 )
 
                 // 主功能卡片 — 2列大卡片
+                val chatName = uiState.childNickname?.takeIf { it.isNotBlank() } ?: "小智"
                 val mainFeatures = listOf(
                     FeatureItem(
                         emoji = "🤖",
                         title = "AI 聊天",
-                        subtitle = "和小智聊聊天",
+                        subtitle = "和${chatName}聊聊天",
                         gradient = GradientPurple,
                         onClick = onNavigateToChat
                     ),
@@ -379,7 +381,7 @@ private fun LevelCard(
 
 // ========== 未登录默认卡片 ==========
 @Composable
-private fun DefaultLevelCard() {
+private fun DefaultLevelCard(childNickname: String? = null) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -397,7 +399,8 @@ private fun DefaultLevelCard() {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "欢迎来到小智同学！",
+                    text = childNickname?.takeIf { it.isNotBlank() }
+                        ?.let { "欢迎${it}同学！" } ?: "欢迎来到小智同学！",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A2E)

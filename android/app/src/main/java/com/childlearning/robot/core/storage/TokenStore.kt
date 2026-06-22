@@ -20,10 +20,15 @@ class TokenStore @Inject constructor(
 ) {
     companion object {
         private val KEY_TOKEN = stringPreferencesKey("device_token")
+        private val KEY_NICKNAME = stringPreferencesKey("child_nickname")
     }
 
     val tokenFlow: Flow<String?> = context.tokenDataStore.data.map { prefs ->
         prefs[KEY_TOKEN]
+    }
+
+    val nicknameFlow: Flow<String?> = context.tokenDataStore.data.map { prefs ->
+        prefs[KEY_NICKNAME]
     }
 
     suspend fun saveToken(token: String) {
@@ -32,9 +37,16 @@ class TokenStore @Inject constructor(
         }
     }
 
+    suspend fun saveNickname(nickname: String) {
+        context.tokenDataStore.edit { prefs ->
+            prefs[KEY_NICKNAME] = nickname
+        }
+    }
+
     suspend fun clearToken() {
         context.tokenDataStore.edit { prefs ->
             prefs.remove(KEY_TOKEN)
+            prefs.remove(KEY_NICKNAME)
         }
     }
 }
