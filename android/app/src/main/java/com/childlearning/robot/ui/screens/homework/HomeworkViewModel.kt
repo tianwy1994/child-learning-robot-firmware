@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.childlearning.robot.domain.usecase.HomeworkUseCase
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -82,7 +84,8 @@ class HomeworkViewModel @Inject constructor(
                                 submitResult = HomeworkSubmitResult(
                                     ocrText = status.ocrText,
                                     score = status.score,
-                                    feedback = parseFeedback(status.gradingResult)
+                                    feedback = parseFeedback(status.gradingResult),
+                                    questionResults = parseQuestions(status.gradingResult)
                                 )
                             )
                             return@launch
@@ -112,15 +115,45 @@ class HomeworkViewModel @Inject constructor(
         }
     }
 
-    /** 从 JSON 格式的 gradingResult 里提取 summary 字段作为反馈文本 */
-    private fun parseFeedback(gradingResult: String?): String? {
+    private fun parseGradingJson(gradingResult: String?): JsonObject? {
         if (gradingResult.isNullOrBlank()) return null
         return try {
-            val summaryMatch = Regex("\"summary\"\\s*:\\s*\"([^\"]+)\"")
-                .find(gradingResult)?.groupValues?.get(1)
-            summaryMatch ?: gradingResult.take(200)
+            JsonParser.parseString(gradingResult).asJsonObject
         } catch (e: Exception) {
             null
+        }
+    }
+
+    /** 从 gradingResult JSON 里提取 summary + encouragement 作为反馈文本 */
+    private fun parseFeedback(gradingResult: String?): String? {
+        val json = parseGradingJson(gradingResult) ?: return null
+        return try {
+            val summary = json.get("summary")?.takeIf { !it.isJsonNull }?.asString
+            val encouragement = json.get("encouragement")?.takeIf { !it.isJsonNull }?.asString
+            listOfNotNull(summary, encouragement).filter { it.isNotBlank() }
+                .joinToString("\n").ifBlank { null }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** 从 gradingResult JSON 里解析每道题的批改详情 */
+    private fun parseQuestions(gradingResult: String?): List<QuestionResult> {
+        val json = parseGradingJson(gradingResult) ?: return emptyList()
+        return try {
+            val questionsArray = json.getAsJsonArray("questions") ?: return emptyList()
+            questionsArray.mapNotNull { element ->
+                val q = element.asJsonObject
+                QuestionResult(
+                    question = q.get("question")?.takeIf { !it.isJsonNull }?.asString ?: return@mapNotNull null,
+                    studentAnswer = q.get("studentAnswer")?.takeIf { !it.isJsonNull }?.asString ?: "",
+                    correctAnswer = q.get("correctAnswer")?.takeIf { !it.isJsonNull }?.asString ?: "",
+                    isCorrect = q.get("isCorrect")?.takeIf { !it.isJsonNull }?.asBoolean ?: false,
+                    explanation = q.get("explanation")?.takeIf { !it.isJsonNull }?.asString?.ifBlank { null }
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
@@ -139,10 +172,19 @@ class HomeworkViewModel @Inject constructor(
     }
 }
 
+data class QuestionResult(
+    val question: String,
+    val studentAnswer: String,
+    val correctAnswer: String,
+    val isCorrect: Boolean,
+    val explanation: String?
+)
+
 data class HomeworkSubmitResult(
     val ocrText: String?,
     val score: Int?,
-    val feedback: String?
+    val feedback: String?,
+    val questionResults: List<QuestionResult> = emptyList()
 )
 
 data class HomeworkUiState(

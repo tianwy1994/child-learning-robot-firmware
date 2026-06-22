@@ -20,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -216,6 +218,54 @@ fun HomeworkScreen(
                             Text("识别内容", style = MaterialTheme.typography.titleSmall)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(result.ocrText, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                // 每题批改详情
+                if (result.questionResults.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("批改详情", style = MaterialTheme.typography.titleSmall)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            result.questionResults.forEach { q ->
+                                Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            if (q.isCorrect) "✅" else "❌",
+                                            fontSize = 16.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            q.question,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                    if (!q.isCorrect) {
+                                        Text(
+                                            "你的答案：${q.studentAnswer.ifBlank { "未作答" }}  正确答案：${q.correctAnswer}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(start = 24.dp, top = 2.dp)
+                                        )
+                                        if (!q.explanation.isNullOrBlank()) {
+                                            Text(
+                                                "💡 ${q.explanation}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(start = 24.dp, top = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
