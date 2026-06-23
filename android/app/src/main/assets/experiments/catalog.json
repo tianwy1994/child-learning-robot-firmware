@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "categories": [
+    {
+      "name": "化学", "icon": "🧪",
+      "experiments": [
+        {"id":"acid-base-solutions","title":"酸碱溶液","desc":"探究酸碱 pH 值与浓度的关系","difficulty":1},
+        {"id":"balancing-chemical-equations","title":"化学方程式配平","desc":"练习配平化学方程式","difficulty":2},
+        {"id":"battery-voltage","title":"电池电压","desc":"探究电池串联与电压的关系","difficulty":1},
+        {"id":"beers-law-lab","title":"比尔定律","desc":"探究溶液浓度与吸光度的关系","difficulty":3},
+        {"id":"build-a-molecule","title":"搭建分子","desc":"用原子搭建分子模型","difficulty":1},
+        {"id":"concentration","title":"溶液浓度","desc":"改变溶质溶剂的量观察浓度变化","difficulty":1},
+        {"id":"molarity","title":"摩尔浓度","desc":"探究摩尔浓度的概念","difficulty":2},
+        {"id":"molecule-shapes","title":"分子形状","desc":"探究 VSEPR 理论与分子几何结构","difficulty":2},
+        {"id":"ph-scale","title":"pH 标度","desc":"测量常见液体的 pH 值","difficulty":1},
+        {"id":"reactants-products-and-leftovers","title":"反应物与生成物","desc":"探究化学反应中的质量守恒","difficulty":1},
+        {"id":"states-of-matter","title":"物质状态","desc":"观察固液气三态变化","difficulty":1},
+        {"id":"sugar-and-salt-solutions","title":"糖与盐的溶解（英文）","desc":"观察离子分子在溶液中的行为","difficulty":2}
+      ]
+    },
+    {
+      "name": "物理", "icon": "⚡",
+      "experiments": [
+        {"id":"bending-light","title":"光的折射","desc":"探究光在不同介质中的传播","difficulty":2},
+        {"id":"charges-and-fields","title":"电荷与电场","desc":"观察电场线和电势分布","difficulty":2},
+        {"id":"circuit-construction-kit-dc","title":"电路搭建（直流）","desc":"搭建串联和并联电路","difficulty":1},
+        {"id":"circuit-construction-kit-dc-virtual-lab","title":"电路虚拟实验室","desc":"用万用表测量电压电流","difficulty":2},
+        {"id":"coulomb-force","title":"库仑力","desc":"探究电荷间的作用力","difficulty":2},
+        {"id":"energy-skate-park-basics","title":"能量滑板公园","desc":"探究动能与势能的转化","difficulty":1},
+        {"id":"faradays-law","title":"法拉第电磁感应","desc":"探究磁通量变化产生电流","difficulty":2},
+        {"id":"forces-and-motion-basics","title":"力与运动基础","desc":"探究力和加速度的关系","difficulty":1},
+        {"id":"friction","title":"摩擦力","desc":"探究摩擦力的影响因素","difficulty":1},
+        {"id":"gravity-force-lab","title":"万有引力实验室","desc":"探究质量与距离对引力的影响","difficulty":1},
+        {"id":"hookes-law","title":"胡克定律","desc":"探究弹簧弹力与形变的关系","difficulty":1},
+        {"id":"magnet-and-compass","title":"磁铁与指南针（英文）","desc":"观察磁场方向","difficulty":1},
+        {"id":"ohms-law","title":"欧姆定律","desc":"探究电压电流电阻的关系","difficulty":1},
+        {"id":"pendulum-lab","title":"单摆实验","desc":"探究摆长质量对周期的影响","difficulty":2},
+        {"id":"projectile-motion","title":"抛体运动","desc":"调整角度和速度观察抛射轨迹","difficulty":2},
+        {"id":"resistance-in-a-wire","title":"导线电阻","desc":"探究导线长度粗细对电阻的影响","difficulty":1},
+        {"id":"wave-on-a-string","title":"绳波","desc":"观察横波的传播和反射","difficulty":1}
+      ]
+    },
+    {
+      "name": "生物", "icon": "🧬",
+      "experiments": [
+        {"id":"gene-expression-essentials","title":"基因表达基础","desc":"探究基因如何表达蛋白质","difficulty":3},
+        {"id":"natural-selection","title":"自然选择","desc":"模拟环境对物种选择的影响","difficulty":2},
+        {"id":"neuron","title":"神经元","desc":"观察神经信号的传导","difficulty":2}
+      ]
+    },
+    {
+      "name": "科学", "icon": "🔭",
+      "experiments": [
+        {"id":"gravity-and-orbits","title":"引力与轨道","desc":"探究天体运动规律","difficulty":2},
+        {"id":"greenhouse-effect","title":"温室效应（英文）","desc":"探究大气成分对温度的影响","difficulty":1},
+        {"id":"my-solar-system","title":"我的太阳系（英文）","desc":"模拟行星绕太阳运行","difficulty":2},
+        {"id":"under-pressure","title":"液体压强","desc":"探究液体深度与压强的关系","difficulty":2}
+      ]
+    }
+  ]
+}

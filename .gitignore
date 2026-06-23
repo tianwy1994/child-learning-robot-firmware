@@ -9,6 +9,8 @@ target/
 
 # Gradle
 build/
+.gradle/
+local.properties
 
 # 系统
 .DS_Store

@@ -48,6 +48,10 @@ fun HomeScreen(
     onNavigateToGame: () -> Unit,
     onNavigateToHomework: () -> Unit,
     onNavigateToChallenge: () -> Unit,
+    onNavigateToGratitude: () -> Unit,
+    onNavigateToEmotion: () -> Unit,
+    onNavigateToFamilyTask: () -> Unit,
+    onNavigateToExperiment: () -> Unit,
     onNavigateToBind: () -> Unit,
     onLogout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
@@ -208,6 +212,15 @@ fun HomeScreen(
                 SurpriseDialog(surprise = surprise, onDismiss = { viewModel.dismissSurprise() })
             }
 
+            // ===== 成长树 =====
+            uiState.treeStats?.let { stats ->
+                GrowthTreeCard(
+                    totalEntries = stats.totalEntries,
+                    onClick = onNavigateToGratitude,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+            }
+
             // ===== 每日任务 =====
             uiState.quests?.let { quests ->
                 if (quests.isNotEmpty()) {
@@ -259,6 +272,20 @@ fun HomeScreen(
                         gradient = GradientOrange,
                         onClick = onNavigateToChallenge
                     ),
+                    FeatureItem(
+                        emoji = "🔬",
+                        title = "科学实验",
+                        subtitle = "动手做实验",
+                        gradient = listOf(Color(0xFF1a1a2e), Color(0xFF3742fa)),
+                        onClick = onNavigateToExperiment
+                    ),
+                    FeatureItem(
+                        emoji = "🌻",
+                        title = "感恩日记",
+                        subtitle = "说出感谢的事",
+                        gradient = listOf(Color(0xFFFF9800), Color(0xFFFFC107)),
+                        onClick = onNavigateToGratitude
+                    ),
                 )
 
                 mainFeatures.chunked(2).forEach { rowItems ->
@@ -280,16 +307,15 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // 次要功能标题
+                // 学习乐园
                 Text(
-                    text = "🌈 更多精彩",
+                    text = "🌱 学习乐园",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A2E),
                     modifier = Modifier.padding(bottom = 12.dp, top = 4.dp)
                 )
 
-                // 次要功能 — 横向小卡片
                 val subFeatures = listOf(
                     FeatureItem(
                         emoji = "🏆",
@@ -297,6 +323,20 @@ fun HomeScreen(
                         subtitle = "查看成就",
                         gradient = GradientCyan,
                         onClick = onNavigateToGame
+                    ),
+                    FeatureItem(
+                        emoji = "💜",
+                        title = "今日心情",
+                        subtitle = "记录我的感受",
+                        gradient = listOf(Color(0xFF9C27B0), Color(0xFFE040FB)),
+                        onClick = onNavigateToEmotion
+                    ),
+                    FeatureItem(
+                        emoji = "🏠",
+                        title = "家庭任务",
+                        subtitle = "家长布置的事",
+                        gradient = listOf(Color(0xFF3F51B5), Color(0xFF7986CB)),
+                        onClick = onNavigateToFamilyTask
                     ),
                 )
 
@@ -707,6 +747,72 @@ private fun SurpriseDialog(surprise: DailySurpriseResponse, onDismiss: () -> Uni
             }
         }
     )
+}
+
+// ========== 成长树卡片 ==========
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GrowthTreeCard(
+    totalEntries: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val treeEmoji = when {
+        totalEntries < 5 -> "🌱"
+        totalEntries < 15 -> "🌿"
+        totalEntries < 30 -> "🌳"
+        else -> "🌲"
+    }
+    val encouragement = when {
+        totalEntries < 5 -> "刚刚种下，继续浇水！"
+        totalEntries < 15 -> "小芽长出来了，真棒！"
+        totalEntries < 30 -> "大树在成长，坚持下去！"
+        else -> "参天大树！感恩的心最美！"
+    }
+
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = treeEmoji, fontSize = 44.sp)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "我的感恩成长树",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2E7D32)
+                )
+                Text(
+                    text = encouragement,
+                    fontSize = 13.sp,
+                    color = Color(0xFF558B2F)
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "$totalEntries",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF388E3C)
+                )
+                Text(
+                    text = "篇日记",
+                    fontSize = 11.sp,
+                    color = Color(0xFF81C784)
+                )
+            }
+        }
+    }
 }
 
 // ========== 工具函数 ==========

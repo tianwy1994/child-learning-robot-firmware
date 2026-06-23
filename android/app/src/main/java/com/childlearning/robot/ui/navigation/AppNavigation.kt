@@ -22,6 +22,10 @@ import com.childlearning.robot.ui.screens.login.LoginScreen
 import com.childlearning.robot.ui.screens.challenge.ChallengeListScreen
 import com.childlearning.robot.ui.screens.challenge.ChallengeDetailScreen
 import com.childlearning.robot.ui.screens.voice.VoiceScreen
+import com.childlearning.robot.ui.screens.gratitude.GratitudeScreen
+import com.childlearning.robot.ui.screens.emotion.EmotionScreen
+import com.childlearning.robot.ui.screens.familytask.FamilyTaskScreen
+import com.childlearning.robot.ui.screens.experiment.ExperimentScreen
 
 /**
  * 应用导航
@@ -61,6 +65,10 @@ fun AppNavigation(
                 onNavigateToGame = { navController.navigate("game") },
                 onNavigateToHomework = { navController.navigate("homework") },
                 onNavigateToChallenge = { navController.navigate("challenge-list") },
+                onNavigateToGratitude = { navController.navigate("gratitude") },
+                onNavigateToEmotion = { navController.navigate("emotion") },
+                onNavigateToFamilyTask = { navController.navigate("family-task") },
+                onNavigateToExperiment = { navController.navigate("experiment") },
                 onNavigateToBind = { /* 已移除绑定入口 */ },
                 onLogout = {
                     navController.navigate("login") {
@@ -88,6 +96,10 @@ fun AppNavigation(
         composable("focus") { FocusScreen(onBack = { navController.popBackStack() }) }
         composable("game") { GameScreen(onBack = { navController.popBackStack() }) }
         composable("homework") { HomeworkScreen(onBack = { navController.popBackStack() }) }
+        composable("gratitude") { GratitudeScreen(onBack = { navController.popBackStack() }) }
+        composable("emotion") { EmotionScreen(onBack = { navController.popBackStack() }) }
+        composable("family-task") { FamilyTaskScreen(onBack = { navController.popBackStack() }) }
+        composable("experiment") { ExperimentScreen(onBack = { navController.popBackStack() }) }
 
         // ===== 挑战 =====
         // 题库题目临时存储（跨屏幕传递）

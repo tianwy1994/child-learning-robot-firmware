@@ -159,6 +159,42 @@ interface ApiService {
 
     @GET("api/hardware/focus/ambient-sounds")
     suspend fun getAmbientSounds(): ApiResult<List<AmbientSoundResponse>>
+
+    // ---------- 感恩日记 ----------
+
+    @POST("api/hardware/gratitude")
+    suspend fun createGratitude(@Body body: GratitudeCreateRequest): ApiResult<GratitudeEntry>
+
+    @GET("api/hardware/gratitude/list")
+    suspend fun getGratitudeList(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): ApiResult<GratitudePage>
+
+    @GET("api/hardware/gratitude/tree")
+    suspend fun getGratitudeTree(): ApiResult<GratitudeTreeStats>
+
+    // ---------- 情绪打卡 ----------
+
+    @GET("api/hardware/emotion/today")
+    suspend fun getTodayEmotion(): ApiResult<TodayEmotionResponse>
+
+    @GET("api/hardware/emotion/weekly")
+    suspend fun getWeeklyEmotion(@Query("days") days: Int = 7): ApiResult<List<EmotionDayResponse>>
+
+    @POST("api/hardware/emotion/checkin")
+    suspend fun checkinEmotion(@Body body: EmotionCheckinRequest): ApiResult<EmotionCheckinResponse>
+
+    // ---------- 家庭任务 ----------
+
+    @GET("api/hardware/family-tasks")
+    suspend fun getFamilyTasks(): ApiResult<List<FamilyTaskResponse>>
+
+    @POST("api/hardware/family-tasks/{id}/complete")
+    suspend fun completeFamilyTask(
+        @Path("id") id: Long,
+        @Body body: FamilyTaskCompleteRequest
+    ): ApiResult<FamilyTaskResponse>
 }
 
 // ============================================================================
@@ -501,4 +537,70 @@ data class AmbientSoundResponse(
     val name: String,
     val description: String? = null,
     val file: String? = null
+)
+
+// ---------- 感恩日记 ----------
+
+data class GratitudeCreateRequest(
+    val content: String,
+    val gratitudeTarget: String? = null,
+    val photoUrl: String? = null,
+    val shared: Boolean = false
+)
+
+data class GratitudeEntry(
+    val id: Long,
+    val content: String,
+    val gratitudeTarget: String? = null,
+    val photoUrl: String? = null,
+    val shared: Boolean = false,
+    val createdAt: String? = null
+)
+
+data class GratitudePage(
+    val content: List<GratitudeEntry> = emptyList(),
+    val totalElements: Long = 0,
+    val totalPages: Int = 0,
+    val number: Int = 0
+)
+
+data class GratitudeTreeStats(
+    val totalEntries: Int = 0,
+    val sharedEntries: Int = 0,
+    val treeLevel: Int = 1
+)
+
+// ---------- 情绪打卡 ----------
+
+data class TodayEmotionResponse(
+    val emoji: String? = null,
+    val label: String? = null,
+    val avgScore: Double? = null
+)
+
+data class EmotionDayResponse(
+    val date: String,
+    val label: String? = null,
+    val avgScore: Double? = null
+)
+
+data class EmotionCheckinRequest(val emoji: String)
+
+data class EmotionCheckinResponse(val id: Long)
+
+// ---------- 家庭任务 ----------
+
+data class FamilyTaskResponse(
+    val id: Long,
+    val title: String,
+    val description: String? = null,
+    val deadline: String? = null,
+    val status: String = "PENDING",
+    val submitText: String? = null,
+    val createdAt: String? = null
+)
+
+data class FamilyTaskCompleteRequest(
+    val text: String,
+    val photoUrl: String? = null
 )

@@ -34,6 +34,7 @@ class HomeViewModel @Inject constructor(
         autoCheckin()
         loadTodayQuests()
         loadDailySurprise()
+        loadGratitudeTree()
         startProactivePolling()
     }
 
@@ -151,6 +152,17 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun loadGratitudeTree() {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getGratitudeTree()
+                if (response.isSuccess && response.data != null) {
+                    _uiState.value = _uiState.value.copy(treeStats = response.data)
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
     fun dismissSurprise() {
         _uiState.value = _uiState.value.copy(surprise = null)
     }
@@ -177,5 +189,6 @@ data class HomeUiState(
     val checkinMessage: String? = null,
     val quests: List<DailyQuestResponse>? = null,
     val surprise: DailySurpriseResponse? = null,
-    val proactiveMessage: String? = null
+    val proactiveMessage: String? = null,
+    val treeStats: com.childlearning.robot.core.network.GratitudeTreeStats? = null
 )

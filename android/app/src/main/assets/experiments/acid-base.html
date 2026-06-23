@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>酸碱中和实验</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-user-select:none;}
+body{background:linear-gradient(180deg,#1a1a2e,#16213e);min-height:100vh;display:flex;flex-direction:column;align-items:center;font-family:'PingFang SC','Helvetica Neue',sans-serif;padding:10px;color:#fff;overflow-x:hidden}
+h1{font-size:20px;margin:8px 0;text-align:center;color:#e8dff5;letter-spacing:2px}
+.subtitle{font-size:12px;color:#8888aa;margin-bottom:10px;text-align:center}
+#canvasWrap{position:relative;width:100%;max-width:500px;aspect-ratio:1/1;touch-action:none}
+#c{width:100%;height:100%;display:block;border-radius:16px;background:linear-gradient(180deg,#0f3460,#1a1a2e);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.panel{width:100%;max-width:500px;background:rgba(255,255,255,.06);border-radius:16px;padding:14px;margin-top:10px;backdrop-filter:blur(10px)}
+.row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.row:last-child{margin-bottom:0}
+.label{font-size:13px;color:#aaaacc;min-width:50px}
+.ph-bar{flex:1;height:12px;background:linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#8b5cf6);border-radius:6px;position:relative;overflow:hidden}
+.ph-fill{height:100%;width:50%;border-radius:6px;transition:width .3s}
+.ph-val{font-size:18px;font-weight:700;min-width:56px;text-align:center;transition:color .3s}
+.ph-label{font-size:11px;color:#8888aa;text-align:center;margin-top:2px}
+.btn-row{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:80px;padding:12px 8px;border:none;border-radius:12px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;transition:transform .15s,opacity .15s}
+.btn:active{transform:scale(.95);opacity:.8}
+.btn-add{background:linear-gradient(135deg,#3b82f6,#6366f1)}
+.btn-clear{background:linear-gradient(135deg,#64748b,#475569)}
+.btn-save{background:linear-gradient(135deg,#10b981,#059669)}
+.btn-reset{background:linear-gradient(135deg,#ef4444,#dc2626)}
+.obs-area{width:100%;margin-top:10px}
+.obs-area textarea{width:100%;height:60px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#ddd;font-size:13px;padding:10px;resize:none;outline:none;font-family:inherit}
+.obs-area textarea::placeholder{color:#666}
+.obs-area textarea:focus{border-color:#6366f1}
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.85);color:#fff;padding:20px 30px;border-radius:16px;font-size:16px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center;backdrop-filter:blur(10px)}
+.toast.show{opacity:1}
+.steps{display:flex;gap:6px;margin-bottom:10px}
+.step{flex:1;padding:6px 0;text-align:center;font-size:11px;border-radius:8px;background:rgba(255,255,255,.05);color:#666}
+.step.active{background:rgba(99,102,241,.3);color:#a5b4fc;font-weight:600}
+.step.done{background:rgba(16,185,129,.2);color:#6ee7b7}
+@media(max-width:400px){h1{font-size:17px}.btn{font-size:12px;padding:10px 6px}}
+</style>
+</head>
+<body>
+
+<h1>🧪 酸碱中和实验</h1>
+<div class="subtitle">拖动试剂到烧杯 · 观察颜色和 pH 变化</div>
+
+<div class="steps">
+  <div class="step active" id="step1">① 观察</div>
+  <div class="step" id="step2">② 猜想</div>
+  <div class="step" id="step3">③ 实验</div>
+  <div class="step" id="step4">④ 结论</div>
+</div>
+
+<div id="canvasWrap">
+  <canvas id="c"></canvas>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <span class="label">pH 值</span>
+    <div class="ph-bar"><div class="ph-fill" id="phFill" style="width:50%;margin-left:25%"></div></div>
+    <span class="ph-val" id="phVal">7.0</span>
+  </div>
+  <div class="ph-label" id="phLabel">中性 🧪</div>
+</div>
+
+<div class="panel">
+  <div class="btn-row">
+    <button class="btn btn-add" ontouchend="addReagent('acid')">🧫 加酸 (HCl)</button>
+    <button class="btn btn-add" ontouchend="addReagent('base')">🧫 加碱 (NaOH)</button>
+    <button class="btn btn-clear" ontouchend="clearObservations()">🗑️ 清空</button>
+  </div>
+  <div class="obs-area">
+    <textarea id="obsInput" placeholder="写下你的观察…（如：颜色变成红色，pH=3）"></textarea>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-save" ontouchend="saveObservation()">📝 记录观察</button>
+    <button class="btn btn-reset" ontouchend="resetExperiment()">🔄 重置实验</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+let W,H,scale;
+
+function resize(){
+  const rect=canvas.parentElement.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  W=rect.width;H=rect.height;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.scale(dpr,dpr);
+  scale=W/500;
+}
+resize();window.addEventListener('resize',resize);
+
+// ---- Experiment State ----
+let pH=7;
+let acidDrops=0,baseDrops=0;
+let liquidColor={r:200,g:200,b:200}; // initial: neutral (grayish)
+let bubbles=[];
+let liquidLevel=0.35; // percentage of beaker height
+let animateId=null;
+let particles=[];
+
+// Reagent bottles (for visual drag - simplified as buttons)
+// We use touch buttons instead of full drag for reliability on mobile
+
+function getPHColor(pH){
+  if(pH<2) return {r:255,g:30,b:30};
+  if(pH<4) return {r:255,g:80,b:50};
+  if(pH<6) return {r:255,g:160,b:50};
+  if(pH<7) return {r:255,g:200,b:100};
+  if(pH==7) return {r:210,g:210,b:200};
+  if(pH<8) return {r:150,g:220,b:180};
+  if(pH<9) return {r:80,g:200,b:160};
+  if(pH<11) return {r:50,g:150,b:200};
+  return {r:100,g:80,b:220};
+}
+
+function addReagent(type){
+  if(type==='acid'){
+    acidDrops++;
+    pH=Math.max(0,Math.round((pH-0.5)*10)/10);
+    showToast('🧫 加入盐酸 (HCl)');
+    spawnBubbles(3,'acid');
+  }else{
+    baseDrops++;
+    pH=Math.min(14,Math.round((pH+0.5)*10)/10);
+    showToast('🧫 加入氢氧化钠 (NaOH)');
+    spawnBubbles(3,'base');
+  }
+  updateUI();
+  spawnParticles(8);
+}
+
+function resetExperiment(){
+  pH=7;acidDrops=0;baseDrops=0;
+  liquidColor=getPHColor(7);
+  bubbles=[];particles=[];
+  updateUI();
+  showToast('🔄 实验已重置');
+}
+
+function spawnBubbles(n,type){
+  for(let i=0;i<n;i++){
+    bubbles.push({
+      x:W*0.3+Math.random()*W*0.4,
+      y:H*(0.35+Math.random()*0.1),
+      r:2+Math.random()*5,
+      speed:0.3+Math.random()*0.8,
+      alpha:1,
+      color:type==='acid'?'rgba(255,100,100,0.6)':'rgba(100,200,255,0.6)'
+    });
+  }
+}
+
+function spawnParticles(n){
+  for(let i=0;i<n;i++){
+    particles.push({
+      x:W/2+(Math.random()-0.5)*W*0.3,
+      y:H*0.35,
+      vx:(Math.random()-0.5)*2,
+      vy:-(1+Math.random()*2),
+      r:1.5+Math.random()*3,
+      alpha:1,
+      color:pH<7?'#ff6666':pH>7?'#66aaff':'#aaddaa'
+    });
+  }
+}
+
+function updateUI(){
+  const clr=getPHColor(pH);
+  liquidColor=clr;
+
+  // pH bar
+  const pct=Math.round((pH/14)*100);
+  document.getElementById('phFill').style.width=pct+'%';
+  document.getElementById('phFill').style.marginLeft='0';
+  document.getElementById('phVal').textContent=pH.toFixed(1);
+
+  // pH color
+  const phEl=document.getElementById('phVal');
+  const hsl=pHToHSL(pH);
+  phEl.style.color=hsl;
+
+  // Label
+  let label='';
+  if(pH<3) label='强酸性 🔴';
+  else if(pH<5) label='弱酸性 🟠';
+  else if(pH<6.5) label='微酸性 🟡';
+  else if(pH<7.5) label='中性 🧪';
+  else if(pH<9) label='弱碱性 🟢';
+  else if(pH<11) label='碱性 🔵';
+  else label='强碱性 🟣';
+  document.getElementById('phLabel').textContent=label;
+
+  updateSteps();
+}
+
+function pHToHSL(pH){
+  const t=pH/14;
+  const h=Math.round(240-t*240);
+  return `hsl(${h},80%,50%)`;
+}
+
+function updateSteps(){
+  const steps=['step1','step2','step3','step4'];
+  // Step 1 always active
+  // Step 3 active when drops>0
+  document.getElementById('step3').className='step'+(acidDrops+baseDrops>0?' active':'');
+  if(acidDrops+baseDrops>0){
+    document.getElementById('step2').className='step done';
+  }
+}
+
+// ---- Canvas Drawing ----
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const cx=W/2;
+
+  // === Draw beaker ===
+  const bw=W*0.55; // beaker width
+  const bh=H*0.55; // beaker height
+  const bx=cx-bw/2; // beaker x
+  const by=H*0.35; // beaker y (top)
+  const lvl=by+bh*liquidLevel; // liquid top y
+
+  // Beaker shadow
+  ctx.shadowColor='rgba(0,0,0,0.3)';
+  ctx.shadowBlur=20;
+  ctx.shadowOffsetY=5;
+
+  // Beaker body (glass)
+  ctx.shadowColor='transparent';
+  ctx.shadowBlur=0;
+  ctx.shadowOffsetY=0;
+
+  // Liquid fill
+  const lc=liquidColor;
+  const lg=ctx.createLinearGradient(bx,lvl,bx,by+bh);
+  lg.addColorStop(0,`rgba(${lc.r},${lc.g},${lc.b},0.85)`);
+  lg.addColorStop(1,`rgba(${lc.r*0.6},${lc.g*0.6},${lc.b*0.6},0.9)`);
+  ctx.fillStyle=lg;
+  roundRect(ctx,bx+6,lvl,bw-12,bh-lvl+2,4);
+  ctx.fill();
+
+  // Liquid surface highlight
+  ctx.fillStyle=`rgba(255,255,255,0.15)`;
+  roundRect(ctx,bx+10,lvl-2,bw-20,4,2);
+  ctx.fill();
+
+  // Glass edges
+  ctx.strokeStyle='rgba(200,220,255,0.4)';
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(bx,by);ctx.lineTo(bx,by+bh);
+  ctx.lineTo(bx+bw,by+bh);ctx.lineTo(bx+bw,by);
+  ctx.stroke();
+
+  // Beaker rim
+  ctx.strokeStyle='rgba(200,220,255,0.5)';
+  ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(bx-5,by);ctx.lineTo(bx+bw+5,by);
+  ctx.stroke();
+
+  // === Draw bubbles ===
+  for(let i=bubbles.length-1;i>=0;i--){
+    const b=bubbles[i];
+    b.y-=b.speed;
+    b.x+=Math.sin(b.y*0.1)*0.5;
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.fillStyle=b.color;
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.3)';
+    ctx.lineWidth=1;
+    ctx.stroke();
+    if(b.y<by||b.alpha<=0) bubbles.splice(i,1);
+  }
+
+  // === Draw particles ===
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx;
+    p.y+=p.vy;
+    p.alpha-=0.02;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=p.color;
+    ctx.globalAlpha=p.alpha;
+    ctx.fill();
+    ctx.globalAlpha=1;
+    if(p.alpha<=0) particles.splice(i,1);
+  }
+
+  // === Drop counters ===
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.font=`${14*scale}px sans-serif`;
+  ctx.textAlign='left';
+  ctx.fillText(`HCl: ${acidDrops}滴`,bx+8,by+bh+25);
+  ctx.textAlign='right';
+  ctx.fillText(`NaOH: ${baseDrops}滴`,bx+bw-8,by+bh+25);
+
+  // === Reagent bottles (visual) ===
+  const bottleY=H*0.06;
+  const bottleW=W*0.18;
+  const bottleH=W*0.2;
+
+  // HCl bottle
+  drawBottle(bx+8,bottleY,bottleW,bottleH,'HCl','盐酸','#ff4757');
+  // NaOH bottle
+  drawBottle(bx+bw-bottleW-8,bottleY,bottleW,bottleH,'NaOH','氢氧化钠','#3742fa');
+
+  // === Info text ===
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  ctx.font=`${10*scale}px sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText('点击下方按钮向烧杯中加入试剂',cx,by+bh+50);
+
+  requestAnimationFrame(draw);
+}
+
+function drawBottle(x,y,w,h,label,sub,color){
+  // Bottle body
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  roundRect(ctx,x,y,w,h,6);
+  ctx.fill();
+
+  // Bottle neck
+  ctx.fillStyle='rgba(255,255,255,0.12)';
+  roundRect(ctx,x+w*0.3,y-6,w*0.4,8,3);
+  ctx.fill();
+
+  // Liquid in bottle
+  ctx.fillStyle=color+'44';
+  roundRect(ctx,x+4,y+h*0.35,w-8,h*0.6,4);
+  ctx.fill();
+
+  // Label
+  ctx.fillStyle='#fff';
+  ctx.font=`bold ${w*0.2}px sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText(label,x+w/2,y+h*0.55);
+
+  ctx.font=`${w*0.12}px sans-serif`;
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.fillText(sub,x+w/2,y+h*0.78);
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ---- Observations ----
+function saveObservation(){
+  const text=document.getElementById('obsInput').value.trim();
+  if(!text){
+    showToast('⚠️ 请先写下观察记录');
+    return;
+  }
+  // In real app, this would POST to backend
+  const entry={
+    content:`酸碱中和实验: ${text}`,
+    pH:pH.toFixed(1),
+    acidDrops,baseDrops,
+    timestamp:new Date().toISOString()
+  };
+  console.log('Observation saved:',entry);
+  document.getElementById('obsInput').value='';
+  showToast(`✅ 观察已记录！\npH=${pH.toFixed(1)} · 酸${acidDrops}滴 · 碱${baseDrops}滴`);
+
+  // Set the step "conclusion" as active
+  document.getElementById('step4').className='step active';
+  document.getElementById('step3').className='step done';
+}
+
+function clearObservations(){
+  document.getElementById('obsInput').value='';
+  showToast('🗑️ 已清空');
+}
+
+// ---- Toast ----
+let toastTimer=null;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast show';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{el.className='toast';},2000);
+}
+
+// ---- Init ----
+updateUI();
+draw();
+</script>
+</body>
+</html>
