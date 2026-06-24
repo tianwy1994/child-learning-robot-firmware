@@ -26,6 +26,7 @@ import com.childlearning.robot.ui.screens.gratitude.GratitudeScreen
 import com.childlearning.robot.ui.screens.emotion.EmotionScreen
 import com.childlearning.robot.ui.screens.familytask.FamilyTaskScreen
 import com.childlearning.robot.ui.screens.experiment.ExperimentScreen
+import com.childlearning.robot.ui.screens.experiment.ExperimentViewModel
 
 /**
  * 应用导航
@@ -99,7 +100,10 @@ fun AppNavigation(
         composable("gratitude") { GratitudeScreen(onBack = { navController.popBackStack() }) }
         composable("emotion") { EmotionScreen(onBack = { navController.popBackStack() }) }
         composable("family-task") { FamilyTaskScreen(onBack = { navController.popBackStack() }) }
-        composable("experiment") { ExperimentScreen(onBack = { navController.popBackStack() }) }
+        composable("experiment") {
+            val vm: ExperimentViewModel = hiltViewModel()
+            ExperimentScreen(onBack = { navController.popBackStack() }, ttsPlayer = vm.ttsPlayer)
+        }
 
         // ===== 挑战 =====
         // 题库题目临时存储（跨屏幕传递）

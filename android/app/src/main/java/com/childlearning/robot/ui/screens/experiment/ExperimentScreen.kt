@@ -304,8 +304,16 @@ private fun speakAll(
     ttsPlayer: TtsPlayer?, scope: kotlinx.coroutines.CoroutineScope,
     onState: (Boolean) -> Unit
 ) {
-    val fullText = sections.joinToString("。") { it.text }
-    scope.launch { speakText(ttsPlayer, fullText, onState) }
+    // Play sections one by one (each < 500 chars, avoiding TTS limit)
+    scope.launch {
+        for (section in sections) {
+            onState(true)
+            try {
+                ttsPlayer?.speak(section.text)
+            } catch (_: Exception) {}
+            onState(false)
+        }
+    }
 }
 
 private fun speakSection(
