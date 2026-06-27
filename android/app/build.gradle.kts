@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.childlearning.robot"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.childlearning.robot"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
 
@@ -52,6 +52,36 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+
+    // 自动构建仿真实验并复制到 assets
+    val simulatorRoot = file("../../child-learning-simulator")
+    val assetsExperiments = file("src/main/assets/experiments")
+
+    tasks.register("buildSimulatorForAndroid") {
+        group = "deployment"
+        description = "Build simulator experiments for Android local deployment"
+
+        doFirst {
+            // 清空旧的实验资源
+            if (assetsExperiments.exists()) {
+                assetsExperiments.deleteRecursively()
+            }
+            assetsExperiments.mkdirs()
+        }
+
+        doLast {
+            // 执行 npm run build:android（该脚本已包含 vite build + 复制）
+            exec {
+                workingDir = simulatorRoot
+                commandLine("npm", "run", "build:android")
+            }
+        }
+    }
+
+    // 在编译前自动构建仿真实验
+    tasks.named("preBuild").configure {
+        dependsOn("buildSimulatorForAndroid")
     }
 }
 

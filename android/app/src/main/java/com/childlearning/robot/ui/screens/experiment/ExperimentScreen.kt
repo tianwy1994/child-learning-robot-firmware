@@ -25,215 +25,347 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.childlearning.robot.core.audio.TtsPlayer
-import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.io.File
 
-data class ExpCategory(val name: String, val icon: String, val experiments: List<Experiment>)
-data class Experiment(val id: String, val title: String, val desc: String, val difficulty: Int, val voiceIntro: String? = null)
+/**
+ * 实验数据类 — 对应 simulator registry 中的 experimentMeta
+ */
+data class SimExperiment(
+    val id: String,       // 实验 ID，如 "bending-light"
+    val subject: String,  // 学科 key，如 "physics"
+    val title: String,    // 标题
+    val icon: String,     // Emoji 图标
+    val done: Boolean     // 是否已完成开发
+)
 
+data class SimCategory(
+    val name: String,
+    val icon: String,
+    val experiments: List<SimExperiment>
+)
+
+/** 本项目中实验的布局模式：列表 / WebView */
+private enum class ExpMode { List, Detail }
+
+/**
+ * 科学实验站
+ *
+ * 从服务器加载 [child-learning-simulator] 构建的 70+ 交互实验。
+ * 点击实验卡片 → WebView 加载对应实验页面。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExperimentScreen(onBack: () -> Unit, ttsPlayer: TtsPlayer? = null) {
+fun ExperimentScreen(
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
-    var categories by remember { mutableStateOf<List<ExpCategory>>(emptyList()) }
-    var selectedExp by remember { mutableStateOf<Experiment?>(null) }
+    var mode by remember { mutableStateOf(ExpMode.List) }
+    var categories by remember { mutableStateOf<List<SimCategory>>(emptyList()) }
+    var selectedExp by remember { mutableStateOf<SimExperiment?>(null) }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(Unit) { categories = loadCatalog(context) }
+    // 加载目录
+    LaunchedEffect(Unit) {
+        categories = loadCatalog(context)
+    }
 
-    if (selectedExp != null) {
+    // ── 详情模式 ──
+    if (mode == ExpMode.Detail && selectedExp != null) {
         ExperimentWebView(
             experiment = selectedExp!!,
-            context = context,
-            ttsPlayer = ttsPlayer,
-            onBack = { selectedExp = null }
-        )
-    } else {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("科学实验站", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
-                    navigationIcon = { IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }},
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0f3460))
-                )
-            },
-            containerColor = Color(0xFF1a1a2e)
-        ) { padding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                categories.forEach { cat ->
-                    item {
-                        Spacer(Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(cat.icon, fontSize = 22.sp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(cat.name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE8DFF5))
-                            Spacer(Modifier.width(8.dp))
-                            Text("${cat.experiments.size}个实验", fontSize = 13.sp, color = Color(0xFF8888AA))
-                        }
-                    }
-                    items(cat.experiments) { exp ->
-                        val isEnglish = exp.title.contains("（英文）")
-                        Card(
-                            onClick = { selectedExp = exp },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = if (isEnglish) Color(0xFF1A1A2E) else Color(0xFF16213E)),
-                            border = BorderStroke(1.dp, if (isEnglish) Color(0xFF333355) else Color(0xFF2A2A5E))
-                        ) {
-                            Row(Modifier.padding(14.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(exp.title.removeSuffix("（英文）"), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFFE8DFF5))
-                                        if (isEnglish) {
-                                            Spacer(Modifier.width(6.dp))
-                                            Text("EN", fontSize = 10.sp, color = Color(0xFF8888AA),
-                                                modifier = Modifier.background(Color(0xFF2A2A5E), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
-                                        }
-                                    }
-                                    Text(exp.desc, fontSize = 12.sp, color = Color(0xFF8888AA), modifier = Modifier.padding(top = 4.dp))
-                                }
-                                Text("⭐".repeat(exp.difficulty), fontSize = 12.sp)
-                                Spacer(Modifier.width(8.dp))
-                                Text("▶", fontSize = 20.sp, color = Color(0xFF6366F1))
-                            }
-                        }
-                    }
-                }
-                item { Spacer(Modifier.height(16.dp)) }
+            onBack = {
+                selectedExp = null
+                mode = ExpMode.List
             }
-        }
-    }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ExperimentWebView(
-    experiment: Experiment, context: Context,
-    ttsPlayer: TtsPlayer? = null, onBack: () -> Unit
-) {
-    var progress by remember { mutableStateOf(0) }
-    var loaded by remember { mutableStateOf(false) }
-    var errMsg by remember { mutableStateOf<String?>(null) }
-    var isSpeaking by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val isEnglish = experiment.title.contains("（英文）")
-
-    val baseUrl = "https://phet.colorado.edu/sims/html/${experiment.id}/latest/"
-    val lang = if (isEnglish) "en" else "zh_CN"
-    val localFile = "file:///android_asset/experiments/phet/${experiment.id}/${experiment.id}_${lang}.html"
-    val remoteUrl = "${baseUrl}${experiment.id}_${lang}.html"
-    val urlToLoad = localFile
-
-    // Parse voice intro sections
-    val voiceSections = remember(experiment) {
-        parseVoiceSections(experiment.voiceIntro)
+        )
+        return
     }
 
+    // ── 列表模式 ──
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(experiment.title.removeSuffix("（英文）"), fontWeight = FontWeight.Bold, fontSize = 16.sp) },
-                navigationIcon = { IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                }},
-                actions = {
-                    if (isEnglish) Text("EN", fontSize = 11.sp, color = Color(0xFF8888AA),
-                        modifier = Modifier.background(Color(0xFF2A2A5E), RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 4.dp))
+                title = {
+                    Column {
+                        Text("科学实验站", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("小智仿真实验室", fontSize = 11.sp, color = Color(0xFF8888AA))
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0f3460))
             )
         },
         containerColor = Color(0xFF1a1a2e)
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            // Voice buttons
-            if (voiceSections.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    VoiceChip("🔊 全部", isSpeaking) {
-                        speakAll(experiment, voiceSections, ttsPlayer, scope) { isSpeaking = it }
-                    }
-                    voiceSections.forEachIndexed { i, (icon, _, _) ->
-                        VoiceChip(icon, isSpeaking) {
-                            speakSection(voiceSections, i, ttsPlayer, scope) { isSpeaking = it }
-                        }
-                    }
-                    if (isSpeaking) {
-                        VoiceChip("⏹ 停止", false) {
-                            ttsPlayer?.stop()
-                            isSpeaking = false
-                        }
-                    }
+        if (categories.isEmpty()) {
+            // 空状态
+            Box(
+                Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("🔬", fontSize = 48.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Text("加载实验目录中…", color = Color(0xFF8888AA), fontSize = 14.sp)
+                    Spacer(Modifier.height(8.dp))
+                    CircularProgressIndicator(
+                        color = Color(0xFF6366F1),
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // 欢迎说明
+                item {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "共 ${categories.sumOf { it.experiments.size }} 个交互实验",
+                        fontSize = 13.sp,
+                        color = Color(0xFF8888AA),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
 
-            Box(Modifier.weight(1f)) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { ctx ->
-                        WebView(ctx).apply {
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
-                            settings.loadWithOverviewMode = true
-                            settings.useWideViewPort = true
-                            settings.builtInZoomControls = false
-                            settings.displayZoomControls = false
-                            settings.cacheMode = android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
-                            settings.databaseEnabled = true
+                categories.forEach { cat ->
+                    item {
+                        Spacer(Modifier.height(2.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(cat.icon, fontSize = 22.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(cat.name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE8DFF5))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "${cat.experiments.size} 个实验",
+                                fontSize = 13.sp,
+                                color = Color(0xFF8888AA)
+                            )
+                        }
+                    }
 
-                            webChromeClient = object : WebChromeClient() {
-                                override fun onProgressChanged(view: WebView?, p: Int) { progress = p; if (p >= 100) loaded = true }
-                            }
-                            webViewClient = object : WebViewClient() {
-                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { loaded = false; errMsg = null }
-                                override fun onReceivedError(view: WebView?, code: Int, desc: String, url: String?) {
-                                    if (url?.startsWith("file://") == true) view?.loadUrl(remoteUrl)
-                                    else { errMsg = "加载失败($code)"; loaded = true }
+                    items(cat.experiments) { exp ->
+                        Card(
+                            onClick = {
+                                selectedExp = exp
+                                mode = ExpMode.Detail
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (exp.done) Color(0xFF16213E) else Color(0xFF1A1A2E)
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (exp.done) Color(0xFF2A2A5E) else Color(0xFF222244)
+                            )
+                        ) {
+                            Row(
+                                Modifier.padding(14.dp).fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // 实验图标
+                                Text(exp.icon, fontSize = 26.sp, modifier = Modifier.padding(end = 12.dp))
+
+                                Column(Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            exp.title,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = Color(0xFFE8DFF5)
+                                        )
+                                        if (!exp.done) {
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                "开发中",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF8888AA),
+                                                modifier = Modifier
+                                                    .background(Color(0xFF2A2A5E), RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        exp.subject.let { s ->
+                                            when (s) {
+                                                "math" -> "数学"
+                                                "physics" -> "物理"
+                                                "chemistry" -> "化学"
+                                                "biology" -> "生物"
+                                                "earth-science" -> "地球科学"
+                                                else -> s
+                                            }
+                                        },
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF555577),
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
                                 }
-                            }
-                            loadUrl(urlToLoad)
-                        }
-                    }
-                )
 
-                if (!loaded && errMsg == null) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(progress = { progress / 100f }, color = Color(0xFF6366F1), modifier = Modifier.size(64.dp))
-                            Spacer(Modifier.height(16.dp))
-                            Text("加载中 $progress%", color = Color(0xFF8888AA), fontSize = 14.sp)
+                                Spacer(Modifier.width(8.dp))
+                                Text("▶", fontSize = 20.sp, color = Color(0xFF6366F1))
+                            }
                         }
                     }
                 }
 
-                if (errMsg != null) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                            Text("⚠️", fontSize = 48.sp)
-                            Spacer(Modifier.height(16.dp))
-                            Text("加载失败", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE8DFF5))
-                            Spacer(Modifier.height(8.dp))
-                            Text(errMsg ?: "", fontSize = 13.sp, color = Color(0xFF8888AA), textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(20.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Button(onClick = { errMsg = null; loaded = false },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))) { Text("重试") }
-                                OutlinedButton(onClick = { errMsg = null; loaded = false },
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF8888AA))) { Text("在线加载") }
+                item { Spacer(Modifier.height(16.dp)) }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+//  WebView 实验详情
+// ═══════════════════════════════════════════
+
+@SuppressLint("SetJavaScriptEnabled")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExperimentWebView(
+    experiment: SimExperiment,
+    onBack: () -> Unit
+) {
+    var progress by remember { mutableStateOf(0) }
+    var loaded by remember { mutableStateOf(false) }
+    var errMsg by remember { mutableStateOf<String?>(null) }
+
+    // 构建本地文件 URL
+    // 格式: file:///android_asset/experiments/index.html#/experiment/{subject}/{id}
+    val simulatorUrl = "file:///android_asset/experiments/index.html#/experiment/${experiment.subject}/${experiment.id}"
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(experiment.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("小智仿真实验室", fontSize = 10.sp, color = Color(0xFF8888AA))
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0f3460))
+            )
+        },
+        containerColor = Color(0xFF1a1a2e)
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.loadWithOverviewMode = true
+                        settings.useWideViewPort = true
+                        // 启用触摸缩放（方便查看细节）
+                        settings.builtInZoomControls = true
+                        settings.displayZoomControls = false
+                        // 本地文件访问权限
+                        settings.allowFileAccess = true
+                        settings.allowFileAccessFromFileURLs = true
+                        settings.allowUniversalAccessFromFileURLs = true
+                        // 默认缓存策略
+                        settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+                        settings.databaseEnabled = true
+                        settings.loadsImagesAutomatically = true
+
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onProgressChanged(view: WebView?, p: Int) {
+                                progress = p
+                                if (p >= 100) loaded = true
                             }
+                        }
+
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                loaded = false
+                                errMsg = null
+                            }
+
+                            override fun onReceivedError(
+                                view: WebView?, code: Int,
+                                desc: String, url: String?
+                            ) {
+                                errMsg = "加载失败 ($code): $desc"
+                                loaded = true
+                            }
+                        }
+
+                        loadUrl(simulatorUrl)
+                    }
+                }
+            )
+
+            // 加载指示器
+            if (!loaded && errMsg == null) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            progress = { progress / 100f },
+                            color = Color(0xFF6366F1),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "加载中 $progress%",
+                            color = Color(0xFF8888AA),
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+
+            // 错误提示
+            if (errMsg != null) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Text("⚠️", fontSize = 48.sp)
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "加载失败",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE8DFF5)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            errMsg ?: "",
+                            fontSize = 13.sp,
+                            color = Color(0xFF8888AA),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(20.dp))
+                        Text(
+                            "请检查实验资源是否完整",
+                            fontSize = 12.sp,
+                            color = Color(0xFF555577),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                errMsg = null
+                                loaded = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
+                        ) {
+                            Text("重试")
                         }
                     }
                 }
@@ -242,110 +374,31 @@ private fun ExperimentWebView(
     }
 }
 
-@Composable
-private fun VoiceChip(label: String, isActive: Boolean, onClick: () -> Unit) {
-    TextButton(
-        onClick = onClick,
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = if (isActive) Color(0xFF6EE7B7) else Color(0xFFA5B4FC)
-        ),
-        modifier = Modifier
-            .background(
-                if (isActive) Color(0x3310B981) else Color(0x332A2A5E),
-                RoundedCornerShape(20.dp)
-            )
-            .border(1.dp, if (isActive) Color(0x4410B981) else Color(0x333636F1), RoundedCornerShape(20.dp))
-    ) {
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-    }
-}
+// ═══════════════════════════════════════════
+//  目录加载
+// ═══════════════════════════════════════════
 
-// Voice section parsing
-private data class VoiceSection(val icon: String, val label: String, val text: String)
-
-private fun parseVoiceSections(voiceIntro: String?): List<VoiceSection> {
-    if (voiceIntro.isNullOrBlank()) return emptyList()
-    val sections = mutableListOf<VoiceSection>()
-    val lines = voiceIntro.split("\n").map { it.trim() }.filter { it.isNotBlank() }
-    for (line in lines) {
-        val icon = when {
-            line.startsWith("🔬") -> "🔬"
-            line.startsWith("📋") -> "📋"
-            line.startsWith("✨") -> "✨"
-            line.startsWith("🎯") -> "🎯"
-            line.startsWith("🏠") -> "🏠"
-            else -> "📖"
-        }
-        val label = when (icon) {
-            "🔬" -> "背景"
-            "📋" -> "步骤"
-            "✨" -> "效果"
-            "🎯" -> "学到"
-            "🏠" -> "生活"
-            else -> "讲解"
-        }
-        val text = line.replace(Regex("^[🔬📋✨🎯🏠]"), "").trim()
-        sections.add(VoiceSection(icon, label, text))
-    }
-    return sections
-}
-
-private suspend fun speakText(ttsPlayer: TtsPlayer?, text: String, onState: (Boolean) -> Unit) {
-    if (text.isBlank()) return
-    onState(true)
-    try {
-        ttsPlayer?.speak(text)
-    } catch (_: Exception) {}
-    onState(false)
-}
-
-private fun speakAll(
-    exp: Experiment, sections: List<VoiceSection>,
-    ttsPlayer: TtsPlayer?, scope: kotlinx.coroutines.CoroutineScope,
-    onState: (Boolean) -> Unit
-) {
-    // Play sections one by one (each < 500 chars, avoiding TTS limit)
-    scope.launch {
-        for (section in sections) {
-            onState(true)
-            try {
-                ttsPlayer?.speak(section.text)
-            } catch (_: Exception) {}
-            onState(false)
-        }
-    }
-}
-
-private fun speakSection(
-    sections: List<VoiceSection>, idx: Int,
-    ttsPlayer: TtsPlayer?, scope: kotlinx.coroutines.CoroutineScope,
-    onState: (Boolean) -> Unit
-) {
-    if (idx < sections.size) {
-        scope.launch { speakText(ttsPlayer, sections[idx].text, onState) }
-    }
-}
-
-// Load catalog
-private fun loadCatalog(context: Context): List<ExpCategory> {
+private fun loadCatalog(context: Context): List<SimCategory> {
     return try {
-        val json = context.assets.open("experiments/catalog.json").bufferedReader().use { it.readText() }
+        val json = context.assets.open("experiments/catalog.json")
+            .bufferedReader()
+            .use { it.readText() }
         val root = JSONObject(json)
         val arr = root.getJSONArray("categories")
         (0 until arr.length()).map { i ->
             val cat = arr.getJSONObject(i)
             val exps = cat.getJSONArray("experiments")
-            ExpCategory(
+            SimCategory(
                 name = cat.getString("name"),
                 icon = cat.getString("icon"),
                 experiments = (0 until exps.length()).map { j ->
                     val e = exps.getJSONObject(j)
-                    Experiment(
+                    SimExperiment(
                         id = e.getString("id"),
+                        subject = e.getString("subject"),
                         title = e.getString("title"),
-                        desc = e.getString("desc"),
-                        difficulty = e.getInt("difficulty"),
-                        voiceIntro = e.optString("voiceIntro", null)
+                        icon = e.getString("icon"),
+                        done = e.optBoolean("done", false)
                     )
                 }
             )
