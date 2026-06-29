@@ -5,12 +5,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.childlearning.robot.core.network.AuthInterceptor
+import com.childlearning.robot.core.storage.TokenStore
 import com.childlearning.robot.domain.enums.AuthState
 import com.childlearning.robot.domain.usecase.AuthUseCase
 import com.childlearning.robot.ui.screens.chat.ChatScreen
@@ -38,7 +40,8 @@ import com.childlearning.robot.ui.screens.experiment.ExperimentScreen
 @Composable
 fun AppNavigation(
     authUseCase: AuthUseCase,
-    authInterceptor: AuthInterceptor
+    authInterceptor: AuthInterceptor,
+    tokenStore: TokenStore
 ) {
     val navController = rememberNavController()
     val authState by authUseCase.authState.collectAsState(initial = AuthState.Locked)
@@ -55,6 +58,16 @@ fun AppNavigation(
         }
     }
 
+    // 科学实验：在 App 内 WebView 打开（不拉起系统浏览器）
+    val onOpenExperimentBrowser: () -> Unit = {
+        navController.navigate("experiment")
+    }
+
+    // 题库题目临时存储（跨屏幕传递）
+    var pendingBankQuestion by remember {
+        mutableStateOf<com.childlearning.robot.core.network.ChallengeDetailResponse?>(null)
+    }
+
     NavHost(navController = navController, startDestination = startDestination) {
         // ===== 首页 =====
         composable("home") {
@@ -68,7 +81,7 @@ fun AppNavigation(
                 onNavigateToGratitude = { navController.navigate("gratitude") },
                 onNavigateToEmotion = { navController.navigate("emotion") },
                 onNavigateToFamilyTask = { navController.navigate("family-task") },
-                onNavigateToExperiment = { navController.navigate("experiment") },
+                onNavigateToExperiment = onOpenExperimentBrowser,
                 onNavigateToBind = { /* 已移除绑定入口 */ },
                 onLogout = {
                     navController.navigate("login") {
@@ -104,10 +117,6 @@ fun AppNavigation(
         }
 
         // ===== 挑战 =====
-        // 题库题目临时存储（跨屏幕传递）
-        var pendingBankQuestion: com.childlearning.robot.core.network.ChallengeDetailResponse? by
-            androidx.compose.runtime.mutableStateOf(null)
-
         composable("challenge-list") {
             val listViewModel: com.childlearning.robot.ui.screens.challenge.ChallengeViewModel =
                 androidx.hilt.navigation.compose.hiltViewModel()

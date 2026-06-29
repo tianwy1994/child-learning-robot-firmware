@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.childlearning.robot.core.network.AuthInterceptor
+import com.childlearning.robot.core.storage.TokenStore
 import com.childlearning.robot.domain.usecase.AuthUseCase
 import com.childlearning.robot.ui.navigation.AppNavigation
 import com.childlearning.robot.ui.theme.RobotTheme
@@ -19,6 +20,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var authUseCase: AuthUseCase
     @Inject lateinit var authInterceptor: AuthInterceptor
+    @Inject lateinit var tokenStore: TokenStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +37,8 @@ class MainActivity : ComponentActivity() {
             RobotTheme {
                 AppNavigation(
                     authUseCase = authUseCase,
-                    authInterceptor = authInterceptor
+                    authInterceptor = authInterceptor,
+                    tokenStore = tokenStore
                 )
             }
         }

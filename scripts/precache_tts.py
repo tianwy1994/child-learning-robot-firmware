@@ -6,7 +6,7 @@ Usage: python scripts/precache_tts.py
 import json, os, urllib.request, time
 from pathlib import Path
 
-TTS_URL = "http://192.168.31.118:8080/api/hardware/tts/speak"
+TTS_URL = "http://192.168.31.117:8080/api/hardware/tts/speak"
 ANDROID_AUDIO_DIR = Path(__file__).parent.parent / "android" / "app" / "src" / "main" / "assets" / "experiments" / "audio"
 ROBOT_AUDIO_DIR = Path(__file__).parent.parent.parent / "child-learning-robot" / "src" / "main" / "resources" / "static" / "experiments" / "audio"
 

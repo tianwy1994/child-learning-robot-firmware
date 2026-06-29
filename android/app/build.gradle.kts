@@ -74,7 +74,7 @@ android {
             // 执行 npm run build:android（该脚本已包含 vite build + 复制）
             exec {
                 workingDir = simulatorRoot
-                commandLine("npm", "run", "build:android")
+                commandLine("C:/Users/admin/AppData/Roaming/npm/npm.cmd", "run", "build:android")
             }
         }
     }
